@@ -86,11 +86,15 @@ A partition of the columns of a symmetric matrix `A` is _symmetrically orthogona
 1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
 2. the group containing the column `A[:, i]` has no other column with a nonzero in row `j`
 
+It is equivalent to a __star coloring__.
+
 !!! warning
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 
 # References
 
+> [_On the Estimation of Sparse Hessian Matrices_](https://doi.org/10.1137/0716078), Powell and Toint (1979)
+> [_Estimation of sparse hessian matrices and graph coloring problems_](https://doi.org/10.1007/BF02612334), Coleman and Moré (1984)
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function symmetrically_orthogonal_columns(
@@ -102,7 +106,7 @@ function symmetrically_orthogonal_columns(
     end
     issymmetric(A) || return false
     group = group_by_color(color)
-    for i in axes(A, 2), j in axes(A, 2)
+    for i in axes(A, 1), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
         check = _bilateral_check(
@@ -255,6 +259,128 @@ function directly_recoverable_columns(
         if verbose
             @warn "Coefficients $(sort(collect(setdiff(A_unique, B_unique)))) are not directly recoverable."
             return false
+        end
+        return false
+    end
+    return true
+end
+
+"""
+    substitutable_columns(
+        A::AbstractMatrix, order_nonzeros::AbstractMatrix, color::AbstractVector{<:Integer};
+        verbose=false
+    )
+
+Return `true` if coloring the columns of the symmetric matrix `A` with the vector `color` results in a partition that is substitutable, and `false` otherwise.
+For all nonzeros `A[i, j]`, `order_nonzeros[i, j]` provides its order of recovery.
+
+A partition of the columns of a symmetric matrix `A` is _substitutable_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
+
+1. the group containing the column `A[:, j]` has all nonzeros in row `i` ordered before `A[i, j]`
+2. the group containing the column `A[:, i]` has all nonzeros in row `j` ordered before `A[i, j]`
+
+It is equivalent to an __acyclic coloring__.
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+
+# References
+
+> [_On the Estimation of Sparse Hessian Matrices_](https://doi.org/10.1137/0716078), Powell and Toint (1979)
+> [_The Cyclic Coloring Problem and Estimation of Sparse Hessian Matrices_](https://doi.org/10.1137/0607026), Coleman and Cai (1986)
+> [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
+"""
+function substitutable_columns(
+    A::AbstractMatrix, order_nonzeros::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
+)
+    checksquare(A)
+    if !proper_length_coloring(A, color; verbose)
+        return false
+    end
+    issymmetric(A) || return false
+    group = group_by_color(color)
+    for i in axes(A, 1), j in axes(A, 2)
+        iszero(A[i, j]) && continue
+        ci, cj = color[i], color[j]
+        check = _substitutable_check(
+            A, order_nonzeros; i, j, ci, cj, row_group=group, column_group=group, verbose
+        )
+        !check && return false
+    end
+    return true
+end
+
+function _substitutable_check(
+    A::AbstractMatrix,
+    order_nonzeros::AbstractMatrix;
+    i::Integer,
+    j::Integer,
+    ci::Integer,
+    cj::Integer,
+    row_group::AbstractVector,
+    column_group::AbstractVector,
+    verbose::Bool)
+    order_ij = order_nonzeros[i,j]
+    k_row = 0
+    k_column = 0
+    if ci != 0
+        for k in row_group[ci]
+            (k == i) && continue
+            if !iszero(A[k, j])
+                order_kj = order_nonzeros[k, j]
+                @assert !iszero(order_kj)
+                if order_kj > order_ij
+                    k_row = k
+                end
+            end
+        end
+    end
+    if cj != 0
+        for k in column_group[cj]
+            (k == j) && continue
+            if !iszero(A[i, k])
+                order_ik = order_nonzeros[i, k]
+                @assert !iszero(order_ik)
+                if order_ik > order_ij
+                    k_column = k
+                end
+            end
+        end
+    end
+    if ci == 0 && cj == 0
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - Row color ci=$ci is neutral.
+            - Column color cj=$cj is neutral.
+            """
+        end
+        return false
+    elseif ci == 0 && !iszero(k_column)
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - Row color ci=$ci is neutral.
+            - For the column $k_column in column color cj=$cj, A[$i, $k_column] is ordered after A[$i, $j].
+            """
+        end
+        return false
+    elseif cj == 0 && !iszero(k_row)
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - For the row $k_row in row color ci=$ci, A[$k_row, $j] is ordered after A[$i, $j].
+            - Column color cj=$cj is neutral.
+            """
+        end
+        return false
+    elseif !iszero(k_row) && !iszero(k_column)
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - For the row $k_row in row color ci=$ci, A[$k_row, $j] is ordered after A[$i, $j].
+            - For the column $k_column in column color cj=$cj, A[$i, $k_column] is ordered after A[$i, $j].
+            """
         end
         return false
     end

@@ -7,17 +7,44 @@ using SparseMatrixColorings
 using SparseMatrixColorings:
     AdjacencyGraph,
     LinearSystemColoringResult,
+    TreeSetColoringResult,
     directly_recoverable_columns,
     matrix_versions,
     respectful_similar,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
-    structurally_biorthogonal
+    structurally_biorthogonal,
+    substitutable_columns
 using Test
 
 const _ALL_ORDERS = (
     NaturalOrder(), LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()
 )
+
+function order_from_trees(result::TreeSetColoringResult)
+    (; ag, color, reverse_bfs_orders, diagonal_indices, tree_edge_indices, nt) = result
+    (; S) = ag
+    n = length(color)
+    nnzS = nnz(S)
+    nzval = zeros(Int, nnzS)
+    order_nonzeros = SparseMatrixCSC(n, n, S.colptr, S.rowval, nzval)
+    counter = 0
+    for i in diagonal_indices
+        counter += 1
+        order_nonzeros[i, i] = counter
+    end
+    for k in 1:nt
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            counter += 1
+            order_nonzeros[i, j] = counter
+            order_nonzeros[j, i] = counter
+        end
+    end
+    return order_nonzeros
+end
 
 function test_coloring_decompression(
     A0::AbstractMatrix,
@@ -77,7 +104,6 @@ function test_coloring_decompression(
         end
 
         @testset "Recoverability" begin
-            # TODO: find tests for recoverability for substitution decompression
             if decompression == :direct
                 if structure == :nonsymmetric
                     if partition == :column
@@ -94,6 +120,13 @@ function test_coloring_decompression(
                         @test directly_recoverable_columns(A0, color)
                     end
                 end
+            end
+        end
+
+        if decompression == :substitution
+            if structure == :symmetric
+                order_nonzeros = order_from_trees(result)
+                @test substitutable_columns(A0, order_nonzeros, color)
             end
         end
 
