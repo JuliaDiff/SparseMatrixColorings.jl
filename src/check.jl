@@ -291,7 +291,10 @@ It is equivalent to an __acyclic coloring__.
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function substitutable_columns(
-    A::AbstractMatrix, order_nonzeros::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
+    A::AbstractMatrix,
+    order_nonzeros::AbstractMatrix,
+    color::AbstractVector{<:Integer};
+    verbose::Bool=false,
 )
     checksquare(A)
     if !proper_length_coloring(A, color; verbose)
@@ -319,8 +322,9 @@ function _substitutable_check(
     cj::Integer,
     row_group::AbstractVector,
     column_group::AbstractVector,
-    verbose::Bool)
-    order_ij = order_nonzeros[i,j]
+    verbose::Bool,
+)
+    order_ij = order_nonzeros[i, j]
     k_row = 0
     k_column = 0
     if ci != 0
