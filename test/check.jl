@@ -282,3 +282,28 @@ For coefficient (i=3, j=5) with colors (ci=3, cj=0):
 """,
     ) substitutable_columns(A3, B3, [1, 2, 3, 3, 0]; verbose=true)
 end
+
+@testset "Substitutable bidirectional" begin
+    A = [
+        1 0 0
+        0 1 0
+        0 0 1
+    ]
+    B = [
+        1 0 0
+        0 2 0
+        0 0 3
+    ]
+
+    # success
+
+    substitutable_bidirectional(A, B, [1, 0, 0], [0, 1, 1])
+
+    # failure
+
+    log = (:warn, "2 colors provided for 3 columns.")
+    @test_logs log !substitutable_bidirectional(A, B, [1, 0, 0], [0, 1]; verbose=true)
+
+    log = (:warn, "4 colors provided for 3 rows.")
+    @test_logs log !substitutable_bidirectional(A, B, [1, 0, 0, 1], [0, 1, 1]; verbose=true)
+end

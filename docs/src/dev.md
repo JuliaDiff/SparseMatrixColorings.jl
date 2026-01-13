@@ -51,6 +51,7 @@ SparseMatrixColorings.symmetrically_orthogonal_columns
 SparseMatrixColorings.structurally_orthogonal_columns
 SparseMatrixColorings.structurally_biorthogonal
 SparseMatrixColorings.substitutable_columns
+SparseMatrixColorings.substitutable_bidirectional
 SparseMatrixColorings.valid_dynamic_order
 ```
 

@@ -130,6 +130,8 @@ A bipartition of the rows and columns of a matrix `A` is _structurally biorthogo
 1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
 2. the group containing the row `A[i, :]` has no other row with a nonzero in column `j`
 
+It is equivalent to an __star bicoloring__.
+
 !!! warning
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 """
@@ -142,8 +144,8 @@ function structurally_biorthogonal(
     if !proper_length_bicoloring(A, row_color, column_color; verbose)
         return false
     end
-    column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
+    column_group = group_by_color(column_color)
     for i in axes(A, 1), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = row_color[i], column_color[j]
@@ -307,6 +309,48 @@ function substitutable_columns(
         ci, cj = color[i], color[j]
         check = _substitutable_check(
             A, order_nonzeros; i, j, ci, cj, row_group=group, column_group=group, verbose
+        )
+        !check && return false
+    end
+    return true
+end
+
+"""
+    substitutable_bidirectional(
+        A::AbstractMatrix, order_nonzeros::AbstractMatrix, row_color::AbstractVector{<:Integer}, column_color::AbstractVector{<:Integer};
+        verbose=false
+    )
+
+Return `true` if bicoloring of the matrix `A` with the vectors `row_color` and `column_color` results in a bipartition that is substitutable, and `false` otherwise.
+For all nonzeros `A[i, j]`, `order_nonzeros[i, j]` provides its order of recovery.
+
+A bipartition of the rows and columns of a matrix `A` is _substitutable_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
+
+1. the group containing the column `A[:, j]` has all nonzeros in row `i` ordered before `A[i, j]`
+2. the group containing the row `A[i, :]` has all nonzeros in column `j` ordered before `A[i, j]`
+
+It is equivalent to an __acyclic bicoloring__.
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+"""
+function substitutable_bidirectional(
+    A::AbstractMatrix,
+    order_nonzeros::AbstractMatrix,
+    row_color::AbstractVector{<:Integer},
+    column_color::AbstractVector{<:Integer};
+    verbose::Bool=false,
+)
+    if !proper_length_bicoloring(A, row_color, column_color; verbose)
+        return false
+    end
+    row_group = group_by_color(row_color)
+    column_group = group_by_color(column_color)
+    for i in axes(A, 1), j in axes(A, 2)
+        iszero(A[i, j]) && continue
+        ci, cj = row_color[i], column_color[j]
+        check = _substitutable_check(
+            A, order_nonzeros; i, j, ci, cj, row_group, column_group, verbose
         )
         !check && return false
     end
