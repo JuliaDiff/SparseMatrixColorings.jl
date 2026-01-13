@@ -238,6 +238,10 @@ end
 
     # failure
 
+    @test !substitutable_columns(A1, B1, [1, 1, 1, 1])
+    log = (:warn, "4 colors provided for 5 columns.")
+    @test_logs log substitutable_columns(A1, B1, [1, 1, 1, 1]; verbose=true)
+
     @test !substitutable_columns(A1, B1, [1, 1, 1, 1, 1])
     @test_logs (
         :warn,
