@@ -5,6 +5,7 @@ using SparseMatrixColorings:
     structurally_biorthogonal,
     directly_recoverable_columns,
     substitutable_columns,
+    substitutable_bidirectional,
     what_fig_41,
     efficient_fig_1
 using Test
