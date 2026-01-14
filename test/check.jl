@@ -233,9 +233,9 @@ end
 
     # success
 
-    substitutable_columns(A1, B1, [1, 2, 2, 2, 2])
-    substitutable_columns(A2, B2, [1, 2, 3, 1, 2])
-    substitutable_columns(A3, B3, [1, 2, 3, 4, 0])
+    @test substitutable_columns(A1, B1, [1, 2, 2, 2, 2])
+    @test substitutable_columns(A2, B2, [1, 2, 3, 1, 2])
+    @test substitutable_columns(A3, B3, [1, 2, 3, 4, 0])
 
     # failure
 
@@ -298,7 +298,7 @@ end
 
     # success
 
-    substitutable_bidirectional(A, B, [1, 0, 0], [0, 1, 1])
+    @test substitutable_bidirectional(A, B, [1, 0, 0], [0, 1, 1])
 
     # failure
 

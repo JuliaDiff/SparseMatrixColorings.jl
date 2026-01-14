@@ -130,7 +130,7 @@ A bipartition of the rows and columns of a matrix `A` is _structurally biorthogo
 1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
 2. the group containing the row `A[i, :]` has no other row with a nonzero in column `j`
 
-It is equivalent to an __star bicoloring__.
+It is equivalent to a __star bicoloring__.
 
 !!! warning
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
