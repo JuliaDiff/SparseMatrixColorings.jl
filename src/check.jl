@@ -269,12 +269,12 @@ end
 
 """
     substitutable_columns(
-        A::AbstractMatrix, order_nonzeros::AbstractMatrix, color::AbstractVector{<:Integer};
+        A::AbstractMatrix, rank_nonzeros::AbstractMatrix, color::AbstractVector{<:Integer};
         verbose=false
     )
 
 Return `true` if coloring the columns of the symmetric matrix `A` with the vector `color` results in a partition that is substitutable, and `false` otherwise.
-For all nonzeros `A[i, j]`, `order_nonzeros[i, j]` provides its order of recovery.
+For all nonzeros `A[i, j]`, `rank_nonzeros[i, j]` provides its rank of recovery.
 
 A partition of the columns of a symmetric matrix `A` is _substitutable_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
 
@@ -294,7 +294,7 @@ It is equivalent to an __acyclic coloring__.
 """
 function substitutable_columns(
     A::AbstractMatrix,
-    order_nonzeros::AbstractMatrix,
+    rank_nonzeros::AbstractMatrix,
     color::AbstractVector{<:Integer};
     verbose::Bool=false,
 )
@@ -308,7 +308,7 @@ function substitutable_columns(
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
         check = _substitutable_check(
-            A, order_nonzeros; i, j, ci, cj, row_group=group, column_group=group, verbose
+            A, rank_nonzeros; i, j, ci, cj, row_group=group, column_group=group, verbose
         )
         !check && return false
     end
@@ -317,12 +317,12 @@ end
 
 """
     substitutable_bidirectional(
-        A::AbstractMatrix, order_nonzeros::AbstractMatrix, row_color::AbstractVector{<:Integer}, column_color::AbstractVector{<:Integer};
+        A::AbstractMatrix, rank_nonzeros::AbstractMatrix, row_color::AbstractVector{<:Integer}, column_color::AbstractVector{<:Integer};
         verbose=false
     )
 
 Return `true` if bicoloring of the matrix `A` with the vectors `row_color` and `column_color` results in a bipartition that is substitutable, and `false` otherwise.
-For all nonzeros `A[i, j]`, `order_nonzeros[i, j]` provides its order of recovery.
+For all nonzeros `A[i, j]`, `rank_nonzeros[i, j]` provides its rank of recovery.
 
 A bipartition of the rows and columns of a matrix `A` is _substitutable_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
 
@@ -336,7 +336,7 @@ It is equivalent to an __acyclic bicoloring__.
 """
 function substitutable_bidirectional(
     A::AbstractMatrix,
-    order_nonzeros::AbstractMatrix,
+    rank_nonzeros::AbstractMatrix,
     row_color::AbstractVector{<:Integer},
     column_color::AbstractVector{<:Integer};
     verbose::Bool=false,
@@ -350,7 +350,7 @@ function substitutable_bidirectional(
         iszero(A[i, j]) && continue
         ci, cj = row_color[i], column_color[j]
         check = _substitutable_check(
-            A, order_nonzeros; i, j, ci, cj, row_group, column_group, verbose
+            A, rank_nonzeros; i, j, ci, cj, row_group, column_group, verbose
         )
         !check && return false
     end
@@ -359,7 +359,7 @@ end
 
 function _substitutable_check(
     A::AbstractMatrix,
-    order_nonzeros::AbstractMatrix;
+    rank_nonzeros::AbstractMatrix;
     i::Integer,
     j::Integer,
     ci::Integer,
@@ -368,14 +368,14 @@ function _substitutable_check(
     column_group::AbstractVector,
     verbose::Bool,
 )
-    order_ij = order_nonzeros[i, j]
+    order_ij = rank_nonzeros[i, j]
     k_row = 0
     k_column = 0
     if ci != 0
         for k in row_group[ci]
             (k == i) && continue
             if !iszero(A[k, j])
-                order_kj = order_nonzeros[k, j]
+                order_kj = rank_nonzeros[k, j]
                 @assert !iszero(order_kj)
                 if order_kj > order_ij
                     k_row = k
@@ -387,7 +387,7 @@ function _substitutable_check(
         for k in column_group[cj]
             (k == j) && continue
             if !iszero(A[i, k])
-                order_ik = order_nonzeros[i, k]
+                order_ik = rank_nonzeros[i, k]
                 @assert !iszero(order_ik)
                 if order_ik > order_ij
                     k_column = k
@@ -499,4 +499,76 @@ function valid_dynamic_order(
         end
     end
     return true
+end
+
+"""
+    rank_nonzeros_from_trees(result::TreeSetColoringResult)
+    rank_nonzeros_from_trees(result::BicoloringResult)
+
+Construct a sparse matrix `rank_nonzeros` that assigns a unique recovery rank
+to each nonzero coefficient associated with an acyclic coloring or bicoloring.
+
+For every nonzero entry `result.A[i, j]`, `rank_nonzeros[i, j]` stores a strictly positive
+integer representing the order in which this coefficient is recovered during the decompression.
+A larger value means the coefficient is recovered later.
+
+This ranking is used to test substitutability (acyclicity) of colorings:
+for a given nonzero `result.A[i, j]`, the ranks allow one to check whether all competing
+nonzeros in the same row or column (within a color group) are recovered before it.
+"""
+function rank_nonzeros_from_trees end
+
+function rank_nonzeros_from_trees(result::TreeSetColoringResult)
+    (; A, ag, reverse_bfs_orders, diagonal_indices, tree_edge_indices, nt) = result
+    (; S) = ag
+    m, n = size(A)
+    nnzS = nnz(S)
+    nzval = zeros(Int, nnzS)
+    rank_nonzeros = SparseMatrixCSC(n, n, S.colptr, S.rowval, nzval)
+    counter = 0
+    for i in diagonal_indices
+        counter += 1
+        rank_nonzeros[i, i] = counter
+    end
+    for k in 1:nt
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            counter += 1
+            rank_nonzeros[i, j] = counter
+            rank_nonzeros[j, i] = counter
+        end
+    end
+    return rank_nonzeros
+end
+
+function rank_nonzeros_from_trees(result::BicoloringResult)
+    (; A, abg, row_color, column_color, symmetric_result, large_colptr, large_rowval) =
+        result
+    @assert symmetric_result isa TreeSetColoringResult
+    (; ag, reverse_bfs_orders, tree_edge_indices, nt) = symmetric_result
+    (; S) = ag
+    m, n = size(A)
+    nnzA = nnz(S) ÷ 2
+    nzval = zeros(Int, nnzA)
+    colptr = large_colptr[1:(n + 1)]
+    rowval = large_rowval[1:nnzA]
+    rowval .-= n
+    rank_nonzeros = SparseMatrixCSC(m, n, colptr, rowval, nzval)
+    counter = 0
+    for k in 1:nt
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            counter += 1
+            if i > j
+                rank_nonzeros[i - n, j] = counter
+            else
+                rank_nonzeros[j - n, i] = counter
+            end
+        end
+    end
+    return rank_nonzeros
 end

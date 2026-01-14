@@ -7,8 +7,6 @@ using SparseMatrixColorings
 using SparseMatrixColorings:
     AdjacencyGraph,
     LinearSystemColoringResult,
-    TreeSetColoringResult,
-    BicoloringResult,
     directly_recoverable_columns,
     matrix_versions,
     respectful_similar,
@@ -16,67 +14,13 @@ using SparseMatrixColorings:
     symmetrically_orthogonal_columns,
     structurally_biorthogonal,
     substitutable_columns,
-    substitutable_bidirectional
+    substitutable_bidirectional,
+    rank_nonzeros_from_trees
 using Test
 
 const _ALL_ORDERS = (
     NaturalOrder(), LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()
 )
-
-function order_from_trees(result::TreeSetColoringResult)
-    (; A, ag, reverse_bfs_orders, diagonal_indices, tree_edge_indices, nt) = result
-    (; S) = ag
-    m, n = size(A)
-    nnzS = nnz(S)
-    nzval = zeros(Int, nnzS)
-    order_nonzeros = SparseMatrixCSC(n, n, S.colptr, S.rowval, nzval)
-    counter = 0
-    for i in diagonal_indices
-        counter += 1
-        order_nonzeros[i, i] = counter
-    end
-    for k in 1:nt
-        first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            counter += 1
-            order_nonzeros[i, j] = counter
-            order_nonzeros[j, i] = counter
-        end
-    end
-    return order_nonzeros
-end
-
-function order_from_trees(result::BicoloringResult)
-    (; A, abg, row_color, column_color, symmetric_result, large_colptr, large_rowval) =
-        result
-    @assert symmetric_result isa TreeSetColoringResult
-    (; ag, reverse_bfs_orders, tree_edge_indices, nt) = symmetric_result
-    (; S) = ag
-    m, n = size(A)
-    nnzA = nnz(S) ÷ 2
-    nzval = zeros(Int, nnzA)
-    colptr = large_colptr[1:(n + 1)]
-    rowval = large_rowval[1:nnzA]
-    rowval .-= n
-    order_nonzeros = SparseMatrixCSC(m, n, colptr, rowval, nzval)
-    counter = 0
-    for k in 1:nt
-        first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            counter += 1
-            if i > j
-                order_nonzeros[i - n, j] = counter
-            else
-                order_nonzeros[j - n, i] = counter
-            end
-        end
-    end
-    return order_nonzeros
-end
 
 function test_coloring_decompression(
     A0::AbstractMatrix,
@@ -158,8 +102,8 @@ function test_coloring_decompression(
         @testset "Substitutable" begin
             if decompression == :substitution
                 if structure == :symmetric
-                    order_nonzeros = order_from_trees(result)
-                    @test substitutable_columns(A0, order_nonzeros, color)
+                    rank_nonzeros = rank_nonzeros_from_trees(result)
+                    @test substitutable_columns(A0, rank_nonzeros, color)
                 end
             end
         end
@@ -305,9 +249,9 @@ function test_bicoloring_decompression(
 
         if decompression == :substitution
             @testset "Substitutable" begin
-                order_nonzeros = order_from_trees(result)
+                rank_nonzeros = rank_nonzeros_from_trees(result)
                 @test substitutable_bidirectional(
-                    A0, order_nonzeros, row_color, column_color
+                    A0, rank_nonzeros, row_color, column_color
                 )
             end
         end
