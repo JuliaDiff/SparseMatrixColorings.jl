@@ -86,11 +86,15 @@ A partition of the columns of a symmetric matrix `A` is _symmetrically orthogona
 1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
 2. the group containing the column `A[:, i]` has no other column with a nonzero in row `j`
 
+It is equivalent to a __star coloring__.
+
 !!! warning
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 
 # References
 
+> [_On the Estimation of Sparse Hessian Matrices_](https://doi.org/10.1137/0716078), Powell and Toint (1979)
+> [_Estimation of sparse hessian matrices and graph coloring problems_](https://doi.org/10.1007/BF02612334), Coleman and Moré (1984)
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function symmetrically_orthogonal_columns(
@@ -102,7 +106,7 @@ function symmetrically_orthogonal_columns(
     end
     issymmetric(A) || return false
     group = group_by_color(color)
-    for i in axes(A, 2), j in axes(A, 2)
+    for i in axes(A, 1), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
         check = _bilateral_check(
@@ -126,6 +130,8 @@ A bipartition of the rows and columns of a matrix `A` is _structurally biorthogo
 1. the group containing the column `A[:, j]` has no other column with a nonzero in row `i`
 2. the group containing the row `A[i, :]` has no other row with a nonzero in column `j`
 
+It is equivalent to a __star bicoloring__.
+
 !!! warning
     This function is not coded with efficiency in mind, it is designed for small-scale tests.
 """
@@ -138,8 +144,8 @@ function structurally_biorthogonal(
     if !proper_length_bicoloring(A, row_color, column_color; verbose)
         return false
     end
-    column_group = group_by_color(column_color)
     row_group = group_by_color(row_color)
+    column_group = group_by_color(column_color)
     for i in axes(A, 1), j in axes(A, 2)
         iszero(A[i, j]) && continue
         ci, cj = row_color[i], column_color[j]
@@ -262,6 +268,174 @@ function directly_recoverable_columns(
 end
 
 """
+    substitutable_columns(
+        A::AbstractMatrix, rank_nonzeros::AbstractMatrix, color::AbstractVector{<:Integer};
+        verbose=false
+    )
+
+Return `true` if coloring the columns of the symmetric matrix `A` with the vector `color` results in a partition that is substitutable, and `false` otherwise.
+For all nonzeros `A[i, j]`, `rank_nonzeros[i, j]` provides its rank of recovery.
+
+A partition of the columns of a symmetric matrix `A` is _substitutable_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
+
+1. the group containing the column `A[:, j]` has all nonzeros in row `i` ordered before `A[i, j]`
+2. the group containing the column `A[:, i]` has all nonzeros in row `j` ordered before `A[i, j]`
+
+It is equivalent to an __acyclic coloring__.
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+
+# References
+
+> [_On the Estimation of Sparse Hessian Matrices_](https://doi.org/10.1137/0716078), Powell and Toint (1979)
+> [_The Cyclic Coloring Problem and Estimation of Sparse Hessian Matrices_](https://doi.org/10.1137/0607026), Coleman and Cai (1986)
+> [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
+"""
+function substitutable_columns(
+    A::AbstractMatrix,
+    rank_nonzeros::AbstractMatrix,
+    color::AbstractVector{<:Integer};
+    verbose::Bool=false,
+)
+    checksquare(A)
+    if !proper_length_coloring(A, color; verbose)
+        return false
+    end
+    issymmetric(A) || return false
+    group = group_by_color(color)
+    for i in axes(A, 1), j in axes(A, 2)
+        iszero(A[i, j]) && continue
+        ci, cj = color[i], color[j]
+        check = _substitutable_check(
+            A, rank_nonzeros; i, j, ci, cj, row_group=group, column_group=group, verbose
+        )
+        !check && return false
+    end
+    return true
+end
+
+"""
+    substitutable_bidirectional(
+        A::AbstractMatrix, rank_nonzeros::AbstractMatrix, row_color::AbstractVector{<:Integer}, column_color::AbstractVector{<:Integer};
+        verbose=false
+    )
+
+Return `true` if bicoloring of the matrix `A` with the vectors `row_color` and `column_color` results in a bipartition that is substitutable, and `false` otherwise.
+For all nonzeros `A[i, j]`, `rank_nonzeros[i, j]` provides its rank of recovery.
+
+A bipartition of the rows and columns of a matrix `A` is _substitutable_ if, for every nonzero element `A[i, j]`, either of the following statements holds:
+
+1. the group containing the column `A[:, j]` has all nonzeros in row `i` ordered before `A[i, j]`
+2. the group containing the row `A[i, :]` has all nonzeros in column `j` ordered before `A[i, j]`
+
+It is equivalent to an __acyclic bicoloring__.
+
+!!! warning
+    This function is not coded with efficiency in mind, it is designed for small-scale tests.
+"""
+function substitutable_bidirectional(
+    A::AbstractMatrix,
+    rank_nonzeros::AbstractMatrix,
+    row_color::AbstractVector{<:Integer},
+    column_color::AbstractVector{<:Integer};
+    verbose::Bool=false,
+)
+    if !proper_length_bicoloring(A, row_color, column_color; verbose)
+        return false
+    end
+    row_group = group_by_color(row_color)
+    column_group = group_by_color(column_color)
+    for i in axes(A, 1), j in axes(A, 2)
+        iszero(A[i, j]) && continue
+        ci, cj = row_color[i], column_color[j]
+        check = _substitutable_check(
+            A, rank_nonzeros; i, j, ci, cj, row_group, column_group, verbose
+        )
+        !check && return false
+    end
+    return true
+end
+
+function _substitutable_check(
+    A::AbstractMatrix,
+    rank_nonzeros::AbstractMatrix;
+    i::Integer,
+    j::Integer,
+    ci::Integer,
+    cj::Integer,
+    row_group::AbstractVector,
+    column_group::AbstractVector,
+    verbose::Bool,
+)
+    order_ij = rank_nonzeros[i, j]
+    k_row = 0
+    k_column = 0
+    if ci != 0
+        for k in row_group[ci]
+            (k == i) && continue
+            if !iszero(A[k, j])
+                order_kj = rank_nonzeros[k, j]
+                @assert !iszero(order_kj)
+                if order_kj > order_ij
+                    k_row = k
+                end
+            end
+        end
+    end
+    if cj != 0
+        for k in column_group[cj]
+            (k == j) && continue
+            if !iszero(A[i, k])
+                order_ik = rank_nonzeros[i, k]
+                @assert !iszero(order_ik)
+                if order_ik > order_ij
+                    k_column = k
+                end
+            end
+        end
+    end
+    if ci == 0 && cj == 0
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - Row color ci=$ci is neutral.
+            - Column color cj=$cj is neutral.
+            """
+        end
+        return false
+    elseif ci == 0 && !iszero(k_column)
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - Row color ci=$ci is neutral.
+            - For the column $k_column in column color cj=$cj, A[$i, $k_column] is ordered after A[$i, $j].
+            """
+        end
+        return false
+    elseif cj == 0 && !iszero(k_row)
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - For the row $k_row in row color ci=$ci, A[$k_row, $j] is ordered after A[$i, $j].
+            - Column color cj=$cj is neutral.
+            """
+        end
+        return false
+    elseif !iszero(k_row) && !iszero(k_column)
+        if verbose
+            @warn """
+            For coefficient (i=$i, j=$j) with colors (ci=$ci, cj=$cj):
+            - For the row $k_row in row color ci=$ci, A[$k_row, $j] is ordered after A[$i, $j].
+            - For the column $k_column in column color cj=$cj, A[$i, $k_column] is ordered after A[$i, $j].
+            """
+        end
+        return false
+    end
+    return true
+end
+
+"""
     valid_dynamic_order(g::AdjacencyGraph, π::AbstractVector{<:Integer}, order::DynamicDegreeBasedOrder)
     valid_dynamic_order(bg::AdjacencyGraph, ::Val{side}, π::AbstractVector{<:Integer}, order::DynamicDegreeBasedOrder)
 
@@ -325,4 +499,76 @@ function valid_dynamic_order(
         end
     end
     return true
+end
+
+"""
+    rank_nonzeros_from_trees(result::TreeSetColoringResult)
+    rank_nonzeros_from_trees(result::BicoloringResult)
+
+Construct a sparse matrix `rank_nonzeros` that assigns a unique recovery rank
+to each nonzero coefficient associated with an acyclic coloring or bicoloring.
+
+For every nonzero entry `result.A[i, j]`, `rank_nonzeros[i, j]` stores a strictly positive
+integer representing the order in which this coefficient is recovered during the decompression.
+A larger value means the coefficient is recovered later.
+
+This ranking is used to test substitutability (acyclicity) of colorings:
+for a given nonzero `result.A[i, j]`, the ranks allow one to check whether all competing
+nonzeros in the same row or column (within a color group) are recovered before it.
+"""
+function rank_nonzeros_from_trees end
+
+function rank_nonzeros_from_trees(result::TreeSetColoringResult)
+    (; A, ag, reverse_bfs_orders, diagonal_indices, tree_edge_indices, nt) = result
+    (; S) = ag
+    m, n = size(A)
+    nnzS = nnz(S)
+    nzval = zeros(Int, nnzS)
+    rank_nonzeros = SparseMatrixCSC(n, n, S.colptr, S.rowval, nzval)
+    counter = 0
+    for i in diagonal_indices
+        counter += 1
+        rank_nonzeros[i, i] = counter
+    end
+    for k in 1:nt
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            counter += 1
+            rank_nonzeros[i, j] = counter
+            rank_nonzeros[j, i] = counter
+        end
+    end
+    return rank_nonzeros
+end
+
+function rank_nonzeros_from_trees(result::BicoloringResult)
+    (; A, abg, row_color, column_color, symmetric_result, large_colptr, large_rowval) =
+        result
+    @assert symmetric_result isa TreeSetColoringResult
+    (; ag, reverse_bfs_orders, tree_edge_indices, nt) = symmetric_result
+    (; S) = ag
+    m, n = size(A)
+    nnzA = nnz(S) ÷ 2
+    nzval = zeros(Int, nnzA)
+    colptr = large_colptr[1:(n + 1)]
+    rowval = large_rowval[1:nnzA]
+    rowval .-= n
+    rank_nonzeros = SparseMatrixCSC(m, n, colptr, rowval, nzval)
+    counter = 0
+    for k in 1:nt
+        first = tree_edge_indices[k]
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
+            (i, j) = reverse_bfs_orders[pos]
+            counter += 1
+            if i > j
+                rank_nonzeros[i - n, j] = counter
+            else
+                rank_nonzeros[j - n, i] = counter
+            end
+        end
+    end
+    return rank_nonzeros
 end
