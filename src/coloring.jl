@@ -423,7 +423,6 @@ $TYPEDFIELDS
 """
 struct TreeSet{T}
     """
-    contains the reverse breadth first (BFS) traversal order for each tree in the forest.
     For a tree index `1 <= k <= nt`, the list
     `list = reverse_bfs_order[tree_edge_indices[k]:(tree_edge_indices[k+1]-1)]` is a list of edges
     `list[i] = (leaf, inner)` of the `k`th tree such that `leaf` is a leaf of the tree containing
