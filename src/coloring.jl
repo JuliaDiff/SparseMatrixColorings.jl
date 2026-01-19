@@ -424,9 +424,12 @@ $TYPEDFIELDS
 struct TreeSet{T}
     """
     contains the reverse breadth first (BFS) traversal order for each tree in the forest.
-    More precisely, given an edge `(u, v)` of index `i`,
-    `reverse_bfs_order[i]` is either `(u, v)` or `(v, u)`.
-    The first node of the tuple is the leaf in the reverse BFS order.
+    For a tree index `1 <= k <= nt`, the list
+    `list = reverse_bfs_order[tree_edge_indices[k]:(tree_edge_indices[k+1]-1)]` is a list of edges
+    `list[i] = (leaf, inner)` of the `k`th tree such that `leaf` is a leaf of the tree containing
+    the edges `list[i:end]`.
+    From an other point of view, `reverse(list)` contains the edges in the order of a breadth first
+    (BFS) traversal order of the `k`th tree starting from a depth-minimizing root.
     """
     reverse_bfs_orders::Vector{Tuple{T,T}}
     "For a tree index `1 <= k <= nt`, `is_star[k]` indicates whether the `k`th three is a star."
@@ -436,7 +439,7 @@ struct TreeSet{T}
     One can think of it as a kind of fused vector of offsets (similar to the `colptr` field of `SparseMatrixCSC`) of all trees together.
     """
     tree_edge_indices::Vector{T}
-    "numbers of 2-colored trees for which trees sharing the same 2 colors have disjoint vertices"
+    "numbers of 2-colored trees for which trees sharing the same 2 colors have disjoint edges"
     nt::T
 end
 
@@ -579,6 +582,15 @@ function TreeSet(
     # Number of edges treated
     num_edges_treated = zero(T)
 
+    # The `rank` of the `k`th tree encoded in `forest` does not correspond
+    # to the depth of the tree rooted as the root encoded in `forest` because
+    # `forest.parents[u] = v` only needs a path to exists from `u` to `v` but
+    # there may not be an edge `(u, v)`.
+    # We also want a root `r` that minimizes the depth of the tree rooted at
+    # `r`. To achieve this, we start from each leaf and remove the corresponding
+    # edges. We then look at all leaves of the corresponding graphs and repeat
+    # the process until there is only one vertex left. This vertex will then be
+    # a depth-minimizing root.
     for k in 1:nt
         # Initialize the queue to store the leaves
         queue_start = 1
