@@ -31,6 +31,7 @@ using PrecompileTools: @compile_workload
 using Random: Random, AbstractRNG, default_rng, randperm
 using SparseArrays:
     SparseArrays,
+    AbstractSparseMatrixCSC,
     SparseMatrixCSC,
     dropzeros,
     dropzeros!,

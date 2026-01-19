@@ -86,7 +86,7 @@ function compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::Symbol)
     return size(A) == size(ag.S)
 end
 
-function compatible_pattern(A::SparseMatrixCSC, ag::AdjacencyGraph, uplo::Symbol)
+function compatible_pattern(A::AbstractSparseMatrixCSC, ag::AdjacencyGraph, uplo::Symbol)
     nnzS = (uplo == :L || uplo == :U) ? (nb_edges(ag) + ag.nb_self_loops) : nnz(ag.S)
     return size(A) == size(ag.S) && nnz(A) == nnzS
 end

@@ -586,7 +586,7 @@ function decompress!(
 end
 
 function decompress!(
-    A::SparseMatrixCSC{R},
+    A::AbstractSparseMatrixCSC{R},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
