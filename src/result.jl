@@ -83,7 +83,7 @@ Assumes the colors are contiguously numbered from `0` to some `cmax`.
 """
 function group_by_color(::Type{T}, color::AbstractVector) where {T<:Integer}
     if isempty(color)
-        return SubArray{Int,1,Vector{Int},Tuple{UnitRange{Int}},true}[]
+        return typeof(view(T[], 1:0))[]
     end
     cmin, cmax = extrema(color)
     @assert cmin >= 0
