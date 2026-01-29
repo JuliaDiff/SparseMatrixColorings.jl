@@ -34,13 +34,7 @@ SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[
 
 # Needed if using `coloring(::SparsityPatternCSC, ...)`
 function Base.similar(A::SparsityPatternCSC, ::Type{T}) where {T}
-    return SparseArrays.SparseMatrixCSC(
-        A.m,
-        A.n,
-        A.colptr,
-        A.rowval,
-        similar(A.rowval, T),
-    )
+    return SparseArrays.SparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, similar(A.rowval, T))
 end
 
 """
