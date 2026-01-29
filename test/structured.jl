@@ -56,3 +56,19 @@ end;
         test_structured_coloring_decompression(A)
     end
 end;
+
+# See https://github.com/gdalle/SparseMatrixColorings.jl/pull/299
+@testset "SparsityPatternCSC" begin
+    S = sparse([
+        0 0 1 1 0 1
+        1 0 0 0 1 0
+        0 1 0 0 1 0
+        0 1 1 0 0 0
+    ])
+    P = SparseMatrixColorings.SparsityPatternCSC(S)
+    problem = ColoringProblem()
+    algo = GreedyColoringAlgorithm()
+    result = coloring(P, problem, algo)
+    B = compress(S, result)
+    @test decompress(B, result) isa SparseMatrixCSC{Int,Int}
+end;

@@ -49,17 +49,6 @@ respectful_similar(A::AbstractMatrix) = respectful_similar(A, eltype(A))
 
 respectful_similar(A::AbstractMatrix, ::Type{T}) where {T} = similar(A, T)
 
-# Needed if using `coloring(::SparsityPatternCSC, ...)`
-function respectful_similar(A::SparsityPatternCSC, ::Type{T}) where {T}
-    return SparseArrays.SparseMatrixCSC(
-        A.m,
-        A.n,
-        A.colptr,
-        A.rowval,
-        similar(A.rowval, T),
-    )
-end
-
 function respectful_similar(A::Transpose, ::Type{T}) where {T}
     return transpose(respectful_similar(parent(A), T))
 end
