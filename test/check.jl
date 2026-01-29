@@ -312,8 +312,8 @@ end
 
 # See https://github.com/gdalle/SparseMatrixColorings.jl/pull/300
 @testset "Empty matrix" begin
-    problem = ColoringProblem(; structure = :symmetric, partition = :column)
-    algo = GreedyColoringAlgorithm(; decompression = :substitution)
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:substitution)
     S = spzeros(Int, 0, 0)
     result = coloring(S, problem, algo)
     @test isempty(result.color)
