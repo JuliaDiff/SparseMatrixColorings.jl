@@ -1,4 +1,5 @@
 using LinearAlgebra
+using SparseArrays
 using SparseMatrixColorings:
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
@@ -307,4 +308,13 @@ end
 
     log = (:warn, "4 colors provided for 3 rows.")
     @test_logs log !substitutable_bidirectional(A, B, [1, 0, 0, 1], [0, 1, 1]; verbose=true)
+end
+
+# See https://github.com/gdalle/SparseMatrixColorings.jl/pull/300
+@testset "Empty matrix" begin
+    problem = ColoringProblem(; structure = :symmetric, partition = :column)
+    algo = GreedyColoringAlgorithm(; decompression = :substitution)
+    S = spzeros(Int, 0, 0)
+    result = coloring(S, problem, algo)
+    @test isempty(result.color)
 end
