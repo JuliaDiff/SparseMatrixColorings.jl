@@ -32,6 +32,11 @@ SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
 SparseArrays.rowvals(S::SparsityPatternCSC) = S.rowval
 SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
 
+# Needed if using `coloring(::SparsityPatternCSC, ...)`
+function Base.similar(A::SparsityPatternCSC, ::Type{T}) where {T}
+    return SparseArrays.SparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, similar(A.rowval, T))
+end
+
 """
     transpose(S::SparsityPatternCSC)
 
