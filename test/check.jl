@@ -316,5 +316,6 @@ end
     algo = GreedyColoringAlgorithm(; decompression=:substitution)
     S = spzeros(Int, 0, 0)
     result = coloring(S, problem, algo)
+    @test isempty(result.color)
     @test isempty(result.group)
 end
