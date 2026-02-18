@@ -82,6 +82,9 @@ Create a color-indexed vector `group` such that `i ∈ group[c]` iff `color[i] =
 Assumes the colors are contiguously numbered from `0` to some `cmax`.
 """
 function group_by_color(::Type{T}, color::AbstractVector) where {T<:Integer}
+    if isempty(color)
+        return typeof(view(T[], 1:0))[]
+    end
     cmin, cmax = extrema(color)
     @assert cmin >= 0
     # Compute group sizes and offsets for a joint storage
