@@ -717,7 +717,7 @@ function decompress!(
     uplo::Symbol=:F,
 ) where {R<:Real}
     check_compatible_pattern(A, result.ag, uplo)
-    decompress_csc!(A.colptr, nonzeros(A), B, result, uplo)
+    decompress_csc!(nonzeros(A), A.colptr, B, result, uplo)
     return A
 end
 
