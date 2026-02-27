@@ -15,7 +15,8 @@ using Test
 ## SparsityPatternCSC
 
 @testset "SparsityPatternCSC" begin
-    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
+    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Bool
+    @test SparseArrays.indtype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
     @testset "Transpose" begin
         for _ in 1:1000
             m, n = rand(100:1000), rand(100:1000)
