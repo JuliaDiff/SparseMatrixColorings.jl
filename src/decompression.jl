@@ -707,23 +707,17 @@ function decompress_csc!(
             #! format: on
         end
     end
-    return
+    return nothing
 end
 
 function decompress!(
-    A::AbstractSparseMatrixCSC{R},
+    A::SparseMatrixCSC{R},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
 ) where {R<:Real}
     check_compatible_pattern(A, result.ag, uplo)
-    decompress_csc!(
-        A.colptr,
-        nonzeros(A),
-        B,
-        result,
-        uplo,
-    )
+    decompress_csc!(A.colptr, nonzeros(A), B, result, uplo)
     return A
 end
 
