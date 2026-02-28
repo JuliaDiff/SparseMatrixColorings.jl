@@ -46,6 +46,7 @@ compress
 decompress
 decompress!
 decompress_single_color!
+decompress_csc!
 ```
 
 ## Orders
