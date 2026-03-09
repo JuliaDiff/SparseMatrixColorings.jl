@@ -586,7 +586,7 @@ function decompress!(
 end
 
 """
-    function decompress_csc!(
+   decompress_csc!(
         nzA::AbstractVector{R},
         A_colptr::AbstractVector,
         B::AbstractMatrix{R},
