@@ -310,7 +310,7 @@ end
     @test_logs log !substitutable_bidirectional(A, B, [1, 0, 0, 1], [0, 1, 1]; verbose=true)
 end
 
-# See https://github.com/gdalle/SparseMatrixColorings.jl/pull/300
+# See https://github.com/JuliaDiff/SparseMatrixColorings.jl/pull/300
 @testset "Empty matrix" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algo = GreedyColoringAlgorithm(; decompression=:substitution)
