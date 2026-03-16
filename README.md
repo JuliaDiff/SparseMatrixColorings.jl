@@ -1,7 +1,7 @@
 # SparseMatrixColorings.jl
 
 [![Build Status](https://github.com/juliadiff/SparseMatrixColorings.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/juliadiff/SparseMatrixColorings.jl/actions/workflows/Test.yml?query=branch%3Amain)
-[![GPU build status](https://badge.buildkite.com/7d8ed289d7bdb5a25ae48b2c778a202ce4990b7ee558cdfef8.svg)](https://buildkite.com/julialang/sparsematrixcolorings-dot-jl)
+[![GPU build status](https://badge.buildkite.com/7d8ed289d7bdb5a25ae48b2c778a202ce4990b7ee558cdfef8.svg?branch=main)](https://buildkite.com/julialang/sparsematrixcolorings-dot-jl)
 [![Coverage](https://codecov.io/gh/juliadiff/SparseMatrixColorings.jl/branch/main/graph/badge.svg)](https://app.codecov.io/gh/juliadiff/SparseMatrixColorings.jl)
 
 [![Stable Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliadiff.org/SparseMatrixColorings.jl/stable/)
