@@ -58,7 +58,7 @@ end;
     end
 end;
 
-# See https://github.com/gdalle/SparseMatrixColorings.jl/pull/299
+# See https://github.com/JuliaDiff/SparseMatrixColorings.jl/pull/299
 @testset "SparsityPatternCSC $T" for T in [Int, Float32]
     S = sparse(T[
         0 0 1 1 0 1
