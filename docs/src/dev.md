@@ -41,6 +41,7 @@ SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
 SparseMatrixColorings.BicoloringResult
 SparseMatrixColorings.remap_colors
+SparseMatrixColorings.decompress_csc!
 ```
 
 ## Testing
