@@ -585,8 +585,23 @@ function decompress!(
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC{R},
+"""
+   decompress_csc!(
+        nzA::AbstractVector{R},
+        A_colptr::AbstractVector,
+        B::AbstractMatrix{R},
+        result::TreeSetColoringResult,
+        uplo::Symbol=:F,
+    ) where {R<:Real}
+
+Decompress the values of `B` into the vector of nonzero entries `nzA` of a
+sparse matrix with column pointers `colptr`. This function assumes that the
+row indices are sorted in increasing order and are the same as those of the
+sparse matrix given to the `coloring` function that returned `result`.
+"""
+function decompress_csc!(
+    nzA::AbstractVector{R},
+    A_colptr::AbstractVector{<:Integer},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
@@ -603,10 +618,6 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    (; S) = ag
-    A_colptr = A.colptr
-    nzA = nonzeros(A)
-    check_compatible_pattern(A, ag, uplo)
 
     if eltype(buffer) == R
         buffer_right_type = buffer
@@ -696,6 +707,17 @@ function decompress!(
             #! format: on
         end
     end
+    return nothing
+end
+
+function decompress!(
+    A::SparseMatrixCSC{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:F,
+) where {R<:Real}
+    check_compatible_pattern(A, result.ag, uplo)
+    decompress_csc!(nonzeros(A), A.colptr, B, result, uplo)
     return A
 end
 
