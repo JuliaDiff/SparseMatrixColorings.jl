@@ -1,7 +1,7 @@
 name = "SparseMatrixColorings"
 uuid = "0a514795-09f3-496d-8182-132a7b665d35"
-authors = ["Guillaume Dalle", "Alexis Montoison"]
 version = "0.4.26"
+authors = ["Guillaume Dalle", "Alexis Montoison"]
 
 [deps]
 ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
@@ -26,7 +26,7 @@ SparseMatrixColoringsJuMPExt = ["JuMP", "MathOptInterface"]
 
 [compat]
 ADTypes = "1.2.1"
-CUDA = "5.8.2"
+CUDA = "5.8.2, 6"
 CliqueTrees = "1"
 Colors = "0.12.11, 0.13"
 DocStringExtensions = "0.8,0.9"
