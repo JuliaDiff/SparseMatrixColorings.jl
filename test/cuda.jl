@@ -1,4 +1,4 @@
-using CUDA.CUSPARSE: CuSparseMatrixCSC, CuSparseMatrixCSR
+using cuSPARSE: CuSparseMatrixCSC, CuSparseMatrixCSR
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
@@ -21,34 +21,34 @@ symmetric_params = vcat(
 )
 
 @testset verbose = true "Column coloring & decompression" begin
-    problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
-    algo = GreedyColoringAlgorithm(; decompression=:direct)
+    problem = ColoringProblem(; structure = :nonsymmetric, partition = :column)
+    algo = GreedyColoringAlgorithm(; decompression = :direct)
     @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
             A0 = T(sprand(rng, m, n, p))
-            test_coloring_decompression(A0, problem, algo; gpu=true)
+            test_coloring_decompression(A0, problem, algo; gpu = true)
         end
     end
 end;
 
 @testset verbose = true "Row coloring & decompression" begin
-    problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
-    algo = GreedyColoringAlgorithm(; decompression=:direct)
+    problem = ColoringProblem(; structure = :nonsymmetric, partition = :row)
+    algo = GreedyColoringAlgorithm(; decompression = :direct)
     @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
             A0 = T(sprand(rng, m, n, p))
-            test_coloring_decompression(A0, problem, algo; gpu=true)
+            test_coloring_decompression(A0, problem, algo; gpu = true)
         end
     end
 end;
 
 @testset verbose = true "Symmetric coloring & direct decompression" begin
-    problem = ColoringProblem(; structure=:symmetric, partition=:column)
-    algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct)
+    problem = ColoringProblem(; structure = :symmetric, partition = :column)
+    algo = GreedyColoringAlgorithm(; postprocessing = false, decompression = :direct)
     @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
         @testset "$((; n, p))" for (n, p) in symmetric_params
             A0 = T(sparse(Symmetric(sprand(rng, n, n, p))))
-            test_coloring_decompression(A0, problem, algo; gpu=true)
+            test_coloring_decompression(A0, problem, algo; gpu = true)
         end
         A0 = T(sparse(Diagonal(ones(10))))
         result = coloring(A0, problem, algo)
