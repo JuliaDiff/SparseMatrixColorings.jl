@@ -9,15 +9,7 @@ SMC.matrix_versions(A::AbstractCuSparseMatrix) = (A,)
 
 ## Compression (slow, through CPU)
 
-function SMC.compress(
-    A::AbstractCuSparseMatrix, result::SMC.AbstractColoringResult{structure,:column}
-) where {structure}
-    return CuMatrix(SMC.compress(SparseMatrixCSC(A), result))
-end
-
-function SMC.compress(
-    A::AbstractCuSparseMatrix, result::SMC.AbstractColoringResult{structure,:row}
-) where {structure}
+function SMC.compress(A::AbstractCuSparseMatrix, result::SMC.AbstractColoringResult)
     return CuMatrix(SMC.compress(SparseMatrixCSC(A), result))
 end
 
