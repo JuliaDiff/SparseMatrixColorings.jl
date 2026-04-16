@@ -1,6 +1,6 @@
 module SparseMatrixColoringsGPUArraysExt
 
-using GPUArrays: dense_array_type
+using GPUArrays: AbstractGPUSparseMatrix, dense_array_type
 using SparseArrays: SparseMatrixCSC
 import SparseMatrixColorings as SMC
 
