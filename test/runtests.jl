@@ -12,7 +12,7 @@ include("utils.jl")
 @testset verbose = true "SparseMatrixColorings" begin
     if get(ENV, "JULIA_SMC_TEST_GROUP", nothing) == "GPU"
         @testset "CUDA" begin
-            using CUDA
+            using CUDA, cuSPARSE
             include("cuda.jl")
         end
     else
