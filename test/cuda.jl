@@ -6,8 +6,6 @@ import SparseMatrixColorings as SMC
 using StableRNGs
 using Test
 
-include("utils.jl")
-
 rng = StableRNG(63)
 
 asymmetric_params = vcat(

@@ -3,7 +3,7 @@ module SparseMatrixColoringsCUDAExt
 import SparseMatrixColorings as SMC
 using SparseArrays: SparseMatrixCSC, rowvals, nnz, nzrange
 using CUDA: CuVector, CuMatrix
-using CUDA.CUSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
+using cuSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
 
 SMC.matrix_versions(A::AbstractCuSparseMatrix) = (A,)
 
