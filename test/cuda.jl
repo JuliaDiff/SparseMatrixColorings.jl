@@ -1,12 +1,10 @@
-using CUDA.CUSPARSE: CuSparseMatrixCSC, CuSparseMatrixCSR
+using cuSPARSE: CuSparseMatrixCSC, CuSparseMatrixCSR
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
 import SparseMatrixColorings as SMC
 using StableRNGs
 using Test
-
-include("utils.jl")
 
 rng = StableRNG(63)
 
