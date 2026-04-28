@@ -23,7 +23,7 @@ end
 
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)
 
-Base.eltype(::SparsityPatternCSC{T}) where {T} = T
+SparseArrays.indtype(::SparsityPatternCSC{T}) where {T} = T
 Base.size(S::SparsityPatternCSC) = (S.m, S.n)
 Base.size(S::SparsityPatternCSC, d::Integer) = d::Integer <= 2 ? size(S)[d] : 1
 Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
@@ -31,6 +31,11 @@ Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
 SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
 SparseArrays.rowvals(S::SparsityPatternCSC) = S.rowval
 SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
+
+# Needed if using `coloring(::SparsityPatternCSC, ...)`
+function Base.similar(A::SparsityPatternCSC, ::Type{T}) where {T}
+    return SparseArrays.SparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, similar(A.rowval, T))
+end
 
 """
     transpose(S::SparsityPatternCSC)
@@ -179,6 +184,7 @@ function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}
     # edge_to_index gives an index for each edge
     edge_to_index = Vector{T}(undef, nnz(S))
     offsets = zeros(T, S.n)
+    nb_self_loops = 0
     counter = 0
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -193,16 +199,17 @@ function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}
             elseif i == j
                 # this should never be used, make sure it errors
                 edge_to_index[k] = 0
+                nb_self_loops += 1
             end
         end
     end
-    return edge_to_index
+    return edge_to_index, nb_self_loops
 end
 
 ## Adjacency graph
 
 """
-    AdjacencyGraph{T,has_diagonal}
+    AdjacencyGraph{T,augmented_graph}
 
 Undirected graph without self-loops representing the nonzeros of a symmetric matrix (typically a Hessian matrix).
 
@@ -213,45 +220,52 @@ The adjacency graph of a symmetric matrix `A ∈ ℝ^{n × n}` is `G(A) = (V, E)
 
 # Constructors
 
-    AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
+    AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool=false)
 
 # Fields
 
-- `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, whose diagonal is empty whenever `has_diagonal` is `false`
+- `S::SparsityPatternCSC{T}`: Underlying sparsity pattern, which represents an augmented graph whenever `augmented_graph` is `true`. Here, "augmented graph" means the sparsity pattern of the augmented matrix `H = [0 Jᵀ; J 0]`.
 - `edge_to_index::Vector{T}`: A vector mapping each nonzero of `S` to a unique edge index (ignoring diagonal and accounting for symmetry, so that `(i, j)` and `(j, i)` get the same index)
 
 # References
 
 > [_What Color Is Your Jacobian? SparsityPatternCSC Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
-struct AdjacencyGraph{T<:Integer,has_diagonal}
+struct AdjacencyGraph{T<:Integer,augmented_graph}
     S::SparsityPatternCSC{T}
     edge_to_index::Vector{T}
+    nb_self_loops::Int
 end
 
 Base.eltype(::AdjacencyGraph{T}) where {T} = T
 
 function AdjacencyGraph(
     S::SparsityPatternCSC{T},
-    edge_to_index::Vector{T}=build_edge_to_index(S);
-    has_diagonal::Bool=true,
+    edge_to_index::Vector{T},
+    nb_self_loops::Int;
+    augmented_graph::Bool=false,
 ) where {T}
-    return AdjacencyGraph{T,has_diagonal}(S, edge_to_index)
+    return AdjacencyGraph{T,augmented_graph}(S, edge_to_index, nb_self_loops)
 end
 
-function AdjacencyGraph(A::SparseMatrixCSC; has_diagonal::Bool=true)
-    return AdjacencyGraph(SparsityPatternCSC(A); has_diagonal)
+function AdjacencyGraph(S::SparsityPatternCSC; augmented_graph::Bool=false)
+    edge_to_index, nb_self_loops = build_edge_to_index(S)
+    return AdjacencyGraph(S, edge_to_index, nb_self_loops; augmented_graph)
 end
 
-function AdjacencyGraph(A::AbstractMatrix; has_diagonal::Bool=true)
-    return AdjacencyGraph(SparseMatrixCSC(A); has_diagonal)
+function AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool=false)
+    return AdjacencyGraph(SparsityPatternCSC(A); augmented_graph)
+end
+
+function AdjacencyGraph(A::AbstractMatrix; augmented_graph::Bool=false)
+    return AdjacencyGraph(SparseMatrixCSC(A); augmented_graph)
 end
 
 pattern(g::AdjacencyGraph) = g.S
 edge_indices(g::AdjacencyGraph) = g.edge_to_index
 nb_vertices(g::AdjacencyGraph) = pattern(g).n
 vertices(g::AdjacencyGraph) = 1:nb_vertices(g)
-has_diagonal(::AdjacencyGraph{T,hd}) where {T,hd} = hd
+augmented_graph(::AdjacencyGraph{T,ag}) where {T,ag} = ag
 
 function neighbors(g::AdjacencyGraph, v::Integer)
     S = pattern(g)
@@ -267,30 +281,22 @@ function neighbors_with_edge_indices(g::AdjacencyGraph, v::Integer)
     return zip(neighbors_v, edges_indices_v)
 end
 
-degree(g::AdjacencyGraph{T,false}, v::Integer) where {T} = g.S.colptr[v + 1] - g.S.colptr[v]
+degree(g::AdjacencyGraph{T,true}, v::Integer) where {T} = g.S.colptr[v + 1] - g.S.colptr[v]
 
-function degree(g::AdjacencyGraph{T,true}, v::Integer) where {T}
+function degree(g::AdjacencyGraph{T,false}, v::Integer) where {T}
     neigh = neighbors(g, v)
     has_selfloop = insorted(v, neigh)
     return g.S.colptr[v + 1] - g.S.colptr[v] - has_selfloop
 end
 
-nb_edges(g::AdjacencyGraph{T,false}) where {T} = nnz(g.S) ÷ 2
-
-function nb_edges(g::AdjacencyGraph{T,true}) where {T}
-    ne = 0
-    for v in vertices(g)
-        ne += degree(g, v)
-    end
-    return ne ÷ 2
-end
+nb_edges(g::AdjacencyGraph) = (nnz(g.S) - g.nb_self_loops) ÷ 2
 
 maximum_degree(g::AdjacencyGraph) = maximum(Base.Fix1(degree, g), vertices(g))
 minimum_degree(g::AdjacencyGraph) = minimum(Base.Fix1(degree, g), vertices(g))
 
 function has_neighbor(g::AdjacencyGraph, v::Integer, u::Integer)
     for w in neighbors(g, v)
-        !has_diagonal(g) || (v == w && continue)
+        augmented_graph(g) || (v == w && continue)
         if w == u
             return true
         end

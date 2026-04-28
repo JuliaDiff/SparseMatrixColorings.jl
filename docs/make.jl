@@ -24,5 +24,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/gdalle/SparseMatrixColorings.jl", push_preview=true, devbranch="main"
+    repo="github.com/JuliaDiff/SparseMatrixColorings.jl",
+    push_preview=true,
+    devbranch="main",
 )

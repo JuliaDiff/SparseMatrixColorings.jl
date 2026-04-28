@@ -12,11 +12,11 @@ jobs:
         runs-on: ubuntu-latest
         if: contains(github.event.pull_request.labels.*.name, 'benchmark')
         steps:
-            - uses: actions/checkout@v4
-            - uses: julia-actions/setup-julia@v2
+            - uses: actions/checkout@v6
+            - uses: julia-actions/setup-julia@v3
               with:
                 version: "1"
-            - uses: julia-actions/cache@v2
+            - uses: julia-actions/cache@v3
             - name: Extract Package Name from Project.toml
               id: extract-package-name
               run: |
@@ -46,14 +46,14 @@ jobs:
                 echo '' >> body.md
                 echo '' >> body.md
             - name: Find Comment
-              uses: peter-evans/find-comment@v3
+              uses: peter-evans/find-comment@v4
               id: fcbenchmark
               with:
                 issue-number: ${{ github.event.pull_request.number }}
                 comment-author: 'github-actions[bot]'
                 body-includes: Benchmark Results
             - name: Comment on PR
-              uses: peter-evans/create-or-update-comment@v4
+              uses: peter-evans/create-or-update-comment@v5
               with:
                 comment-id: ${{ steps.fcbenchmark.outputs.comment-id }}
                 issue-number: ${{ github.event.pull_request.number }}

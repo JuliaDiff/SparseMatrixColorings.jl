@@ -106,7 +106,7 @@ function compress(
     return Br, Bc
 end
 
-struct UnsupportedDecompressionError
+struct UnsupportedDecompressionError <: Exception
     msg::String
 end
 
@@ -339,9 +339,9 @@ end
 ## ColumnColoringResult
 
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::ColumnColoringResult)
-    (; color) = result
-    S = result.bg.S2
-    check_same_pattern(A, S)
+    (; bg, color) = result
+    S = bg.S2
+    check_compatible_pattern(A, bg)
     fill!(A, zero(eltype(A)))
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -357,9 +357,9 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::ColumnColoringResult
 )
-    (; group) = result
-    S = result.bg.S2
-    check_same_pattern(A, S)
+    (; bg, group) = result
+    S = bg.S2
+    check_compatible_pattern(A, bg)
     rvS = rowvals(S)
     for j in group[c]
         for k in nzrange(S, j)
@@ -371,9 +371,9 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColoringResult)
-    (; compressed_indices) = result
-    S = result.bg.S2
-    check_same_pattern(A, S)
+    (; bg, compressed_indices) = result
+    S = bg.S2
+    check_compatible_pattern(A, bg)
     nzA = nonzeros(A)
     for k in eachindex(nzA, compressed_indices)
         nzA[k] = B[compressed_indices[k]]
@@ -384,9 +384,9 @@ end
 function decompress_single_color!(
     A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::ColumnColoringResult
 )
-    (; group) = result
-    S = result.bg.S2
-    check_same_pattern(A, S)
+    (; bg, group) = result
+    S = bg.S2
+    check_compatible_pattern(A, bg)
     rvS = rowvals(S)
     nzA = nonzeros(A)
     for j in group[c]
@@ -401,9 +401,9 @@ end
 ## RowColoringResult
 
 function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::RowColoringResult)
-    (; color) = result
-    S = result.bg.S2
-    check_same_pattern(A, S)
+    (; bg, color) = result
+    S = bg.S2
+    check_compatible_pattern(A, bg)
     fill!(A, zero(eltype(A)))
     rvS = rowvals(S)
     for j in axes(S, 2)
@@ -419,9 +419,9 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::RowColoringResult
 )
-    (; group) = result
-    S, Sᵀ = result.bg.S2, result.bg.S1
-    check_same_pattern(A, S)
+    (; bg, group) = result
+    S, Sᵀ = bg.S2, bg.S1
+    check_compatible_pattern(A, bg)
     rvSᵀ = rowvals(Sᵀ)
     for i in group[c]
         for k in nzrange(Sᵀ, i)
@@ -433,9 +433,9 @@ function decompress_single_color!(
 end
 
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::RowColoringResult)
-    (; compressed_indices) = result
-    S = result.bg.S2
-    check_same_pattern(A, S)
+    (; bg, compressed_indices) = result
+    S = bg.S2
+    check_compatible_pattern(A, bg)
     nzA = nonzeros(A)
     for k in eachindex(nzA, compressed_indices)
         nzA[k] = B[compressed_indices[k]]
@@ -450,7 +450,7 @@ function decompress!(
 )
     (; ag, compressed_indices) = result
     (; S) = ag
-    uplo == :F && check_same_pattern(A, S)
+    check_compatible_pattern(A, ag, uplo)
     fill!(A, zero(eltype(A)))
 
     rvS = rowvals(S)
@@ -474,7 +474,7 @@ function decompress_single_color!(
 )
     (; ag, compressed_indices, group) = result
     (; S) = ag
-    uplo == :F && check_same_pattern(A, S)
+    check_compatible_pattern(A, ag, uplo)
 
     lower_index = (c - 1) * S.n + 1
     upper_index = c * S.n
@@ -508,8 +508,8 @@ function decompress!(
     (; ag, compressed_indices) = result
     (; S) = ag
     nzA = nonzeros(A)
+    check_compatible_pattern(A, ag, uplo)
     if uplo == :F
-        check_same_pattern(A, S)
         for k in eachindex(nzA, compressed_indices)
             nzA[k] = B[compressed_indices[k]]
         end
@@ -534,9 +534,10 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, buffer) = result
+    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) =
+        result
     (; S) = ag
-    uplo == :F && check_same_pattern(A, S)
+    check_compatible_pattern(A, ag, uplo)
     R = eltype(A)
     fill!(A, zero(R))
 
@@ -547,11 +548,9 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(ag)
-        for i in axes(S, 1)
-            if !iszero(S[i, i])
-                A[i, i] = B[i, color[i]]
-            end
+    if !augmented_graph(ag)
+        for i in diagonal_indices
+            A[i, i] = B[i, color[i]]
         end
     end
 
@@ -586,8 +585,23 @@ function decompress!(
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC{R},
+"""
+   decompress_csc!(
+        nzA::AbstractVector{R},
+        A_colptr::AbstractVector,
+        B::AbstractMatrix{R},
+        result::TreeSetColoringResult,
+        uplo::Symbol=:F,
+    ) where {R<:Real}
+
+Decompress the values of `B` into the vector of nonzero entries `nzA` of a
+sparse matrix with column pointers `colptr`. This function assumes that the
+row indices are sorted in increasing order and are the same as those of the
+sparse matrix given to the `coloring` function that returned `result`.
+"""
+function decompress_csc!(
+    nzA::AbstractVector{R},
+    A_colptr::AbstractVector{<:Integer},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
@@ -604,10 +618,6 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    (; S) = ag
-    A_colptr = A.colptr
-    nzA = nonzeros(A)
-    uplo == :F && check_same_pattern(A, S)
 
     if eltype(buffer) == R
         buffer_right_type = buffer
@@ -616,7 +626,7 @@ function decompress!(
     end
 
     # Recover the diagonal coefficients of A
-    if has_diagonal(ag)
+    if !augmented_graph(ag)
         if uplo == :L
             for i in diagonal_indices
                 # A[i, i] is the first element in column i
@@ -697,6 +707,17 @@ function decompress!(
             #! format: on
         end
     end
+    return nothing
+end
+
+function decompress!(
+    A::SparseMatrixCSC{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:F,
+) where {R<:Real}
+    check_compatible_pattern(A, result.ag, uplo)
+    decompress_csc!(nonzeros(A), A.colptr, B, result, uplo)
     return A
 end
 
@@ -708,9 +729,10 @@ function decompress!(
     result::LinearSystemColoringResult,
     uplo::Symbol=:F,
 )
-    (; color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) = result
-    S = result.ag.S
-    uplo == :F && check_same_pattern(A, S)
+    (; ag, color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) =
+        result
+    S = ag.S
+    check_compatible_pattern(A, ag, uplo)
 
     # TODO: for some reason I cannot use ldiv! with a sparse QR
     strict_upper_nonzeros_A = M_factorization \ vec(B)
@@ -770,10 +792,22 @@ end
 function decompress!(
     A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
 )
+    (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
+    R = eltype(A)
+    fill!(A, zero(R))
+    nzval = Vector{R}(undef, length(large_rowval))
+    A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, nzval)
     Br_and_Bc = _join_compressed!(result, Br, Bc)
-    A_and_Aᵀ = decompress(Br_and_Bc, result.symmetric_result)
-    copyto!(A, A_and_Aᵀ[(n + 1):(n + m), 1:n])  # original matrix in bottom left corner
+    decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
+    rvA = rowvals(A_and_noAᵀ)
+    nzA = nonzeros(A_and_noAᵀ)
+    for j in 1:n
+        for k in nzrange(A_and_noAᵀ, j)
+            i = rvA[k]
+            A[i - n, j] = nzA[k]
+        end
+    end
     return A
 end
 
@@ -782,10 +816,10 @@ function decompress!(
 )
     (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
-    Br_and_Bc = _join_compressed!(result, Br, Bc)
     # pretend A is larger
     A_and_noAᵀ = SparseMatrixCSC(m + n, m + n, large_colptr, large_rowval, A.nzval)
     # decompress lower triangle only
+    Br_and_Bc = _join_compressed!(result, Br, Bc)
     decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     return A
 end

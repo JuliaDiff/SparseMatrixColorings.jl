@@ -12,8 +12,15 @@ using SparseMatrixColorings:
     respectful_similar,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
-    structurally_biorthogonal
+    structurally_biorthogonal,
+    substitutable_columns,
+    substitutable_bidirectional,
+    rank_nonzeros_from_trees
 using Test
+
+const _ALL_ORDERS = (
+    NaturalOrder(), LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()
+)
 
 function test_coloring_decompression(
     A0::AbstractMatrix,
@@ -73,7 +80,6 @@ function test_coloring_decompression(
         end
 
         @testset "Recoverability" begin
-            # TODO: find tests for recoverability for substitution decompression
             if decompression == :direct
                 if structure == :nonsymmetric
                     if partition == :column
@@ -89,6 +95,15 @@ function test_coloring_decompression(
                         @test symmetrically_orthogonal_columns(A0, color)
                         @test directly_recoverable_columns(A0, color)
                     end
+                end
+            end
+        end
+
+        @testset "Substitutable" begin
+            if decompression == :substitution
+                if structure == :symmetric
+                    rank_nonzeros = rank_nonzeros_from_trees(result)
+                    @test substitutable_columns(A0, rank_nonzeros, color)
                 end
             end
         end
@@ -169,6 +184,22 @@ function test_coloring_decompression(
             @show color_vec
         end
     end
+
+    @testset "More orders is better" begin
+        more_orders = (algo.orders..., _ALL_ORDERS...)
+        better_algo = GreedyColoringAlgorithm{decompression}(
+            more_orders; algo.postprocessing
+        )
+        all_algos = [
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            order in more_orders
+        ]
+        result = coloring(A0, problem, algo)
+        better_result = coloring(A0, problem, better_algo)
+        all_results = [coloring(A0, problem, _algo) for _algo in all_algos]
+        @test ncolors(better_result) <= ncolors(result)
+        @test ncolors(better_result) == minimum(ncolors, all_results)
+    end
 end
 
 function test_bicoloring_decompression(
@@ -215,6 +246,31 @@ function test_bicoloring_decompression(
                 @test structurally_biorthogonal(A0, row_color, column_color)
             end
         end
+
+        if decompression == :substitution
+            @testset "Substitutable" begin
+                rank_nonzeros = rank_nonzeros_from_trees(result)
+                @test substitutable_bidirectional(
+                    A0, rank_nonzeros, row_color, column_color
+                )
+            end
+        end
+    end
+
+    @testset "More orders is better" begin
+        more_orders = (algo.orders..., _ALL_ORDERS...)
+        better_algo = GreedyColoringAlgorithm{decompression}(
+            more_orders; algo.postprocessing
+        )
+        all_algos = [
+            GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
+            order in more_orders
+        ]
+        result = coloring(A0, problem, algo)
+        better_result = coloring(A0, problem, better_algo)
+        all_results = [coloring(A0, problem, _algo) for _algo in all_algos]
+        @test ncolors(better_result) <= ncolors(result)
+        @test ncolors(better_result) == minimum(ncolors, all_results)
     end
 end
 

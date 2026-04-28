@@ -61,16 +61,14 @@ end;
 end;
 
 @testset "LargestFirst" begin
-    for has_diagonal in (false, true)
-        A = sparse([
-            0 1 0 0
-            1 0 1 1
-            0 1 0 1
-            0 1 1 0
-        ])
-        ag = AdjacencyGraph(A; has_diagonal)
-        @test vertices(ag, LargestFirst()) == [2, 3, 4, 1]
-    end
+    A = sparse([
+        0 1 0 0
+        1 0 1 1
+        0 1 0 1
+        0 1 1 0
+    ])
+    ag = AdjacencyGraph(A)
+    @test vertices(ag, LargestFirst()) == [2, 3, 4, 1]
 
     A = sparse([
         1 1 0 0
@@ -144,5 +142,101 @@ end;
         matrix = sparse(Symmetric(sprand(rng, Bool, n, n, p)))
         π = vertices(AdjacencyGraph(matrix), PerfectEliminationOrder())
         @test isperm(π)
+    end
+end
+
+@testset "Multiple orders" begin
+    # I used brute force to find examples where LargestFirst is *strictly* better than NaturalOrder, just to check that the best order is indeed selected when multiple orders are provided
+    @testset "Column coloring" begin
+        A = [
+            0 0 1 1
+            0 1 0 1
+            0 0 1 1
+            1 1 0 0
+        ]
+        problem = ColoringProblem{:nonsymmetric,:column}()
+        algo = GreedyColoringAlgorithm(NaturalOrder())
+        better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
+        @test ncolors(coloring(A, problem, better_algo)) <
+            ncolors(coloring(A, problem, algo))
+    end
+    @testset "Row coloring" begin
+        A = [
+            1 0 0 0
+            0 0 1 0
+            0 1 1 1
+            1 0 0 1
+        ]
+        problem = ColoringProblem{:nonsymmetric,:row}()
+        algo = GreedyColoringAlgorithm(NaturalOrder())
+        better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
+        @test ncolors(coloring(A, problem, better_algo)) <
+            ncolors(coloring(A, problem, algo))
+    end
+    @testset "Star coloring" begin
+        A = [
+            0 1 0 1 1
+            1 1 0 1 0
+            0 0 1 0 1
+            1 1 0 1 0
+            1 0 1 0 0
+        ]
+        problem = ColoringProblem{:symmetric,:column}()
+        algo = GreedyColoringAlgorithm(NaturalOrder())
+        better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
+        @test ncolors(coloring(A, problem, better_algo)) <
+            ncolors(coloring(A, problem, algo))
+    end
+    @testset "Acyclic coloring" begin
+        A = [
+            1 0 0 0 0 1 0
+            0 0 0 1 0 0 0
+            0 0 0 1 0 0 0
+            0 1 1 1 0 1 1
+            0 0 0 0 0 0 1
+            1 0 0 1 0 0 1
+            0 0 0 1 1 1 1
+        ]
+        problem = ColoringProblem{:symmetric,:column}()
+        algo = GreedyColoringAlgorithm{:substitution}(NaturalOrder())
+        better_algo = GreedyColoringAlgorithm{:substitution}((
+            NaturalOrder(), LargestFirst()
+        ))
+        @test ncolors(coloring(A, problem, better_algo)) <
+            ncolors(coloring(A, problem, algo))
+    end
+    @testset "Star bicoloring" begin
+        A = [
+            0 1 0 0 0
+            1 0 1 0 0
+            0 1 0 0 1
+            0 0 0 0 0
+            0 0 1 0 1
+        ]
+        problem = ColoringProblem{:nonsymmetric,:bidirectional}()
+        algo = GreedyColoringAlgorithm(NaturalOrder())
+        better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
+        @test ncolors(coloring(A, problem, better_algo)) <
+            ncolors(coloring(A, problem, algo))
+    end
+    @testset "Acyclic bicoloring" begin
+        A = [
+            0 1 0 1 1 0 1 0 1
+            1 0 0 0 0 0 0 0 1
+            0 0 0 0 0 0 0 0 0
+            1 0 0 1 1 0 1 0 0
+            1 0 0 1 0 0 0 0 0
+            0 0 0 0 0 0 0 0 0
+            1 0 0 1 0 0 0 0 0
+            0 0 0 0 0 0 0 0 0
+            1 1 0 0 0 0 0 0 0
+        ]
+        problem = ColoringProblem{:nonsymmetric,:bidirectional}()
+        algo = GreedyColoringAlgorithm{:substitution}(NaturalOrder())
+        better_algo = GreedyColoringAlgorithm{:substitution}((
+            NaturalOrder(), LargestFirst()
+        ))
+        @test ncolors(coloring(A, problem, better_algo)) <
+            ncolors(coloring(A, problem, algo))
     end
 end

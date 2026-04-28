@@ -24,6 +24,7 @@ ColoringProblem
 ```@docs
 GreedyColoringAlgorithm
 ConstantColoringAlgorithm
+OptimalColoringAlgorithm
 StructuredColoringAlgorithm
 ```
 
