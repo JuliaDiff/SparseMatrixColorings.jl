@@ -15,7 +15,8 @@ using Test
 ## SparsityPatternCSC
 
 @testset "SparsityPatternCSC" begin
-    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
+    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Bool
+    @test SparseArrays.indtype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
     @testset "Transpose" begin
         for _ in 1:1000
             m, n = rand(100:1000), rand(100:1000)
@@ -166,7 +167,7 @@ end;
     @test degree(g, 7) == 6
     @test degree(g, 8) == 6
 
-    g = AdjacencyGraph(transpose(A) * A; has_diagonal=false)
+    g = AdjacencyGraph(transpose(A) * A; augmented_graph=true)
     # wrong degree
     @test degree(g, 1) == 4
     @test degree(g, 2) == 4

@@ -1,9 +1,11 @@
 # SparseMatrixColorings.jl
 
-[![Build Status](https://github.com/gdalle/SparseMatrixColorings.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/gdalle/SparseMatrixColorings.jl/actions/workflows/Test.yml?query=branch%3Amain)
-[![Stable Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://gdalle.github.io/SparseMatrixColorings.jl/stable/)
-[![Dev Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://gdalle.github.io/SparseMatrixColorings.jl/dev/)
-[![Coverage](https://codecov.io/gh/gdalle/SparseMatrixColorings.jl/branch/main/graph/badge.svg)](https://app.codecov.io/gh/gdalle/SparseMatrixColorings.jl)
+[![Build Status](https://github.com/juliadiff/SparseMatrixColorings.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/juliadiff/SparseMatrixColorings.jl/actions/workflows/Test.yml?query=branch%3Amain)
+[![GPU build status](https://badge.buildkite.com/7d8ed289d7bdb5a25ae48b2c778a202ce4990b7ee558cdfef8.svg?branch=main)](https://buildkite.com/julialang/sparsematrixcolorings-dot-jl)
+[![Coverage](https://codecov.io/gh/juliadiff/SparseMatrixColorings.jl/branch/main/graph/badge.svg)](https://app.codecov.io/gh/juliadiff/SparseMatrixColorings.jl)
+
+[![Stable Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliadiff.org/SparseMatrixColorings.jl/stable/)
+[![Dev Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliadiff.org/SparseMatrixColorings.jl/dev/)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/JuliaDiff/BlueStyle)
 [![arXiv](https://img.shields.io/badge/arXiv-2505.07308-b31b1b.svg)](https://arxiv.org/abs/2505.07308)
 [![DOI](https://zenodo.org/badge/801999408.svg)](https://zenodo.org/doi/10.5281/zenodo.11314275)

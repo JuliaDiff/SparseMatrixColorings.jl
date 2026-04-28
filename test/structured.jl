@@ -2,6 +2,7 @@ using ArrayInterface: ArrayInterface
 using BandedMatrices: BandedMatrix, brand
 using BlockBandedMatrices: BandedBlockBandedMatrix, BlockBandedMatrix
 using LinearAlgebra
+using SparseArrays
 using SparseMatrixColorings
 using Test
 
@@ -67,4 +68,20 @@ end;
             test_structured_coloring_decompression(A, algo)
         end
     end
+end;
+
+# See https://github.com/JuliaDiff/SparseMatrixColorings.jl/pull/299
+@testset "SparsityPatternCSC $T" for T in [Int, Float32]
+    S = sparse(T[
+        0 0 1 1 0 1
+        1 0 0 0 1 0
+        0 1 0 0 1 0
+        0 1 1 0 0 0
+    ])
+    P = SparseMatrixColorings.SparsityPatternCSC(S)
+    problem = ColoringProblem()
+    algo = GreedyColoringAlgorithm()
+    result = coloring(P, problem, algo)
+    B = compress(S, result)
+    @test decompress(B, result) isa SparseMatrixCSC{T,Int}
 end;

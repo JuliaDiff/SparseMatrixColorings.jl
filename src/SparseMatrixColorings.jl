@@ -49,6 +49,7 @@ include("graph.jl")
 include("forest.jl")
 include("order.jl")
 include("coloring.jl")
+include("postprocessing.jl")
 include("result.jl")
 include("matrices.jl")
 include("interface.jl")
@@ -59,6 +60,7 @@ include("structured.jl")
 include("check.jl")
 include("examples.jl")
 include("show_colors.jl")
+include("optimal.jl")
 
 include("precompile.jl")
 
@@ -67,6 +69,7 @@ export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFir
 export PerfectEliminationOrder
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export ConstantColoringAlgorithm, StructuredColoringAlgorithm
+export OptimalColoringAlgorithm
 export coloring, fast_coloring
 export column_colors, row_colors, ncolors
 export column_groups, row_groups
