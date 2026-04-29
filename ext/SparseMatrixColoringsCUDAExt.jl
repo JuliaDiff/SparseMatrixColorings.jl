@@ -1,9 +1,30 @@
 module SparseMatrixColoringsCUDAExt
-
+using LinearAlgebra
 import SparseMatrixColorings as SMC
 using SparseArrays: SparseMatrixCSC, rowvals, nnz, nzrange
-using CUDA: CuVector, CuMatrix
+using CUDA: CuArray, CuVector, CuMatrix
 using cuSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
+
+## Basic support for GPU sparsity pattern stuff
+
+SMC.SparsityPatternCSC(A::CuSparseMatrixCSC) = SMC.SparsityPatternCSC(first(A.dims), last(A.dims), A.colPtr, A.rowVal)
+
+for R in (:Diagonal, :Bidiagonal, :Tridiagonal)
+    @eval function SMC.BipartiteGraph(A::$R{T, <:CuArray}; symmetric_pattern::Bool=false) where {T}
+        return SMC.BipartiteGraph(CuSparseMatrixCSC(A); symmetric_pattern)
+    end
+end
+
+function SMC.BipartiteGraph(A::CuSparseMatrixCSC; symmetric_pattern::Bool=false)
+    S2 = SMC.SparsityPatternCSC(A)
+    if symmetric_pattern
+        checksquare(A)  # proxy for checking full symmetry
+        S1 = S2
+    else
+        S1 = transpose(S2)  # rows to columns
+    end
+    return SMC.BipartiteGraph(S1, S2)
+end
 
 ## CSC Result
 
