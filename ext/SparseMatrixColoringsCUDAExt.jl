@@ -7,10 +7,14 @@ using cuSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
 
 ## Basic support for GPU sparsity pattern stuff
 
-SMC.SparsityPatternCSC(A::CuSparseMatrixCSC) = SMC.SparsityPatternCSC(first(A.dims), last(A.dims), A.colPtr, A.rowVal)
+function SMC.SparsityPatternCSC(A::CuSparseMatrixCSC)
+    SMC.SparsityPatternCSC(first(A.dims), last(A.dims), A.colPtr, A.rowVal)
+end
 
 for R in (:Diagonal, :Bidiagonal, :Tridiagonal)
-    @eval function SMC.BipartiteGraph(A::$R{T, <:CuArray}; symmetric_pattern::Bool=false) where {T}
+    @eval function SMC.BipartiteGraph(
+        A::$R{T,<:CuArray}; symmetric_pattern::Bool=false
+    ) where {T}
         return SMC.BipartiteGraph(CuSparseMatrixCSC(A); symmetric_pattern)
     end
 end

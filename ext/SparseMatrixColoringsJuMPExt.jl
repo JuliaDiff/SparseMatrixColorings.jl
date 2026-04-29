@@ -29,7 +29,7 @@ function optimal_distance2_coloring(
     model = Model(optimizer)
     silent && set_silent(model)
     # one variable per vertex to color, removing some renumbering symmetries
-    @variable(model, 1 <= color[i=1:n] <= i, Int)
+    @variable(model, 1 <= color[i = 1:n] <= i, Int)
     # one variable to count the number of distinct colors
     @variable(model, ncolors, Int)
     @constraint(model, [ncolors; color] in MOI.CountDistinct(n + 1))
