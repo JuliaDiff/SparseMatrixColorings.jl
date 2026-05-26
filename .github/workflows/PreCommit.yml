@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-python@v3
       - uses: julia-actions/setup-julia@v3
       - uses: julia-actions/cache@v3
-      - run: julia -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Apps.add(; url="https://github.com/JuliaEditorSupport/JuliaFormatter.jl", rev="3b196afa4a8ed92ba816edec6d122145e311ae35")'
+      - run: julia -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Apps.add("JuliaFormatter")'
       - uses: pre-commit/action@v3.0.1
