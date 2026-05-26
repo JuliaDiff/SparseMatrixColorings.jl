@@ -1,0 +1,5 @@
+repos:
+- repo: https://github.com/JuliaEditorSupport/JuliaFormatter.jl
+  rev: 3b196afa4a8ed92ba816edec6d122145e311ae35 # This PR.
+  hooks:
+  - id: "jlfmt"
