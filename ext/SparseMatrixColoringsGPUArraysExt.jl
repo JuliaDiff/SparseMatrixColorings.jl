@@ -9,7 +9,8 @@ SMC.matrix_versions(A::AbstractGPUSparseMatrix) = (A,)
 ## Compression (slow, through CPU)
 
 function SMC.compress(
-    A::AbstractGPUSparseMatrix, result::SMC.AbstractColoringResult{structure,:column}
+    A::AbstractGPUSparseMatrix,
+    result::SMC.AbstractColoringResult{structure,:column},
 ) where {structure}
     A_cpu = SparseMatrixCSC(A)
     B_cpu = SMC.compress(A_cpu, result)
@@ -18,7 +19,8 @@ function SMC.compress(
 end
 
 function SMC.compress(
-    A::AbstractGPUSparseMatrix, result::SMC.AbstractColoringResult{structure,:row}
+    A::AbstractGPUSparseMatrix,
+    result::SMC.AbstractColoringResult{structure,:row},
 ) where {structure}
     A_cpu = SparseMatrixCSC(A)
     B_cpu = SMC.compress(A_cpu, result)

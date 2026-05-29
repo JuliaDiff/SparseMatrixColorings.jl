@@ -8,7 +8,7 @@ for (structure, partition, decompression) in [
 ]
     A = sparse(Bool[1 0; 0 1])
     problem = ColoringProblem(; structure, partition)
-    algo = GreedyColoringAlgorithm(; decompression, postprocessing=true)
+    algo = GreedyColoringAlgorithm(; decompression, postprocessing = true)
     result = coloring(A, problem, algo)
     if partition == :bidirectional
         Br, Bc = compress(A, result)

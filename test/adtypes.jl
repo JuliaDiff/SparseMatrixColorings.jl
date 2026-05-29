@@ -6,7 +6,7 @@ using Test
 
 @testset "NoColoringAlgorithm" begin
     @testset "Column coloring" begin
-        problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+        problem = ColoringProblem(; structure = :nonsymmetric, partition = :column)
         algo = ADTypes.NoColoringAlgorithm()
         A = sprand(10, 20, 0.3)
         result = coloring(A, problem, algo)
@@ -17,7 +17,7 @@ using Test
     end
 
     @testset "Row coloring" begin
-        problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+        problem = ColoringProblem(; structure = :nonsymmetric, partition = :row)
         algo = ADTypes.NoColoringAlgorithm()
         A = sprand(10, 20, 0.3)
         result = coloring(A, problem, algo)
@@ -28,7 +28,7 @@ using Test
     end
 
     @testset "Symmetric coloring" begin
-        problem = ColoringProblem(; structure=:symmetric, partition=:column)
+        problem = ColoringProblem(; structure = :symmetric, partition = :column)
         algo = ADTypes.NoColoringAlgorithm()
         A = Symmetric(sprand(20, 20, 0.3))
         result = coloring(A, problem, algo)
@@ -39,7 +39,7 @@ using Test
     end
 
     @testset "Bicoloring" begin
-        problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+        problem = ColoringProblem(; structure = :nonsymmetric, partition = :bidirectional)
         algo = ADTypes.NoColoringAlgorithm()
         A = sprand(10, 20, 0.3)
         result = coloring(A, problem, algo)

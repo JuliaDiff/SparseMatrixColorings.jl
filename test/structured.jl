@@ -30,14 +30,14 @@ end;
 end;
 
 @testset "BandedMatrices" begin
-    @testset for (m, n) in [(10, 20), (20, 10)], l in 0:5, u in 0:5
+    @testset for (m, n) in [(10, 20), (20, 10)], l = 0:5, u = 0:5
         A = brand(m, n, l, u)
         test_structured_coloring_decompression(A)
     end
 end;
 
 @testset "BlockBandedMatrices" begin
-    for (mb, nb) in [(10, 20), (20, 10)], lb in 0:3, ub in 0:3, _ in 1:10
+    for (mb, nb) in [(10, 20), (20, 10)], lb = 0:3, ub = 0:3, _ = 1:10
         rows = rand(1:5, mb)
         cols = rand(1:5, nb)
         A = BlockBandedMatrix{Float64}(rand(sum(rows), sum(cols)), rows, cols, (lb, ub))
@@ -46,13 +46,17 @@ end;
 end;
 
 @testset "BandedBlockBandedMatrices" begin
-    for (mb, nb) in [(10, 20), (20, 10)], lb in 0:3, ub in 0:3, _ in 1:10
+    for (mb, nb) in [(10, 20), (20, 10)], lb = 0:3, ub = 0:3, _ = 1:10
         rows = rand(5:10, mb)
         cols = rand(5:10, nb)
         λ = rand(0:5)
         μ = rand(0:5)
         A = BandedBlockBandedMatrix{Float64}(
-            rand(sum(rows), sum(cols)), rows, cols, (lb, ub), (λ, μ)
+            rand(sum(rows), sum(cols)),
+            rows,
+            cols,
+            (lb, ub),
+            (λ, μ),
         )
         test_structured_coloring_decompression(A)
     end

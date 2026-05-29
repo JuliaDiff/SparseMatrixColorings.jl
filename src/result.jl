@@ -106,7 +106,7 @@ function group_by_color(::Type{T}, color::AbstractVector) where {T<:Integer}
     end
     # Create views into contiguous blocks of the group vector
     group = map(1:cmax) do c
-        i = 1 + (c == 1 ? 0 : group_offsets[c - 1])
+        i = 1 + (c == 1 ? 0 : group_offsets[c-1])
         j = group_offsets[c]
         view(group_flat, i:j)
     end
@@ -172,7 +172,9 @@ struct ColumnColoringResult{
 end
 
 function ColumnColoringResult(
-    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
+    A::AbstractMatrix,
+    bg::BipartiteGraph{T},
+    color::Vector{<:Integer},
 ) where {T<:Integer}
     group = group_by_color(T, color)
     compressed_indices = column_csc_indices(bg, color)
@@ -244,7 +246,9 @@ struct RowColoringResult{
 end
 
 function RowColoringResult(
-    A::AbstractMatrix, bg::BipartiteGraph{T}, color::Vector{<:Integer}
+    A::AbstractMatrix,
+    bg::BipartiteGraph{T},
+    color::Vector{<:Integer},
 ) where {T<:Integer}
     group = group_by_color(T, color)
     compressed_indices = row_csc_indices(bg, color)
@@ -327,7 +331,9 @@ function StarSetColoringResult(
 end
 
 function star_csc_indices(
-    ag::AdjacencyGraph{T}, color::Vector{<:Integer}, star_set
+    ag::AdjacencyGraph{T},
+    color::Vector{<:Integer},
+    star_set,
 ) where {T}
     (; star, hub) = star_set
     S = pattern(ag)
@@ -380,7 +386,11 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct TreeSetColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T},R
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:AdjacencyGraph{T},
+    GT<:AbstractGroups{T},
+    R,
 } <: AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
@@ -435,12 +445,12 @@ function TreeSetColoringResult(
     # Index in lower_triangle_offsets and upper_triangle_offsets
     index_offsets = 0
 
-    for k in 1:nt
+    for k = 1:nt
         # Positions of the edges for each tree
         first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
+        last = tree_edge_indices[k+1] - 1
 
-        for pos in first:last
+        for pos = first:last
             (leaf, neighbor) = reverse_bfs_orders[pos]
             # Update lower_triangle_offsets and upper_triangle_offsets
             i = leaf
@@ -512,7 +522,12 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct LinearSystemColoringResult{
-    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T},R,F
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:AdjacencyGraph{T},
+    GT<:AbstractGroups{T},
+    R,
+    F,
 } <: AbstractColoringResult{:symmetric,:column,:substitution}
     A::M
     ag::G
@@ -592,14 +607,18 @@ For all vertex indices `j` between `1` and `n` we have:
     column_color[j] = symmetric_to_column[color[j]]
 """
 function remap_colors(
-    ::Type{T}, color::Vector{<:Integer}, num_sym_colors::Integer, m::Integer, n::Integer
+    ::Type{T},
+    color::Vector{<:Integer},
+    num_sym_colors::Integer,
+    m::Integer,
+    n::Integer,
 ) where {T<:Integer}
     # Map symmetric colors to column colors
     symmetric_to_column = zeros(T, num_sym_colors)
     column_color = zeros(T, n)
 
     counter = 0
-    for j in 1:n
+    for j = 1:n
         cj = color[j]
         if cj > 0
             # First time that we encounter this column color
@@ -616,7 +635,7 @@ function remap_colors(
     row_color = zeros(T, m)
 
     counter = 0
-    for i in (n + 1):(n + m)
+    for i = (n+1):(n+m)
         ci = color[i]
         if ci > 0
             # First time that we encounter this row color
@@ -624,7 +643,7 @@ function remap_colors(
                 counter += 1
                 symmetric_to_row[ci] = counter
             end
-            row_color[i - n] = symmetric_to_row[ci]
+            row_color[i-n] = symmetric_to_row[ci]
         end
     end
 
@@ -702,8 +721,8 @@ function BicoloringResult(
     row_group = group_by_color(T, row_color)
     Br_and_Bc = Matrix{R}(undef, n + m, num_sym_colors)
     large_colptr = copy(ag.S.colptr)
-    large_colptr[(n + 2):end] .= large_colptr[n + 1]  # last few columns are empty
-    large_rowval = ag.S.rowval[1:(end ÷ 2)]  # forget the second half of nonzeros
+    large_colptr[(n+2):end] .= large_colptr[n+1]  # last few columns are empty
+    large_rowval = ag.S.rowval[1:(end÷2)]  # forget the second half of nonzeros
     return BicoloringResult(
         A,
         ag,

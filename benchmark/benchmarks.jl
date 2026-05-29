@@ -21,13 +21,15 @@ for structure in [:nonsymmetric, :symmetric],
 
     problem = ColoringProblem(; structure, partition)
     algo = GreedyColoringAlgorithm(
-        RandomOrder(StableRNG(0), 0); decompression, postprocessing=true
+        RandomOrder(StableRNG(0), 0);
+        decompression,
+        postprocessing = true,
     )
 
     # use several random matrices to reduce variance
     nb_samples = 5
-    As = [sparse(Symmetric(sprand(StableRNG(i), Bool, n, n, p))) for i in 1:nb_samples]
-    results = [coloring(A, problem, algo; decompression_eltype=Float64) for A in As]
+    As = [sparse(Symmetric(sprand(StableRNG(i), Bool, n, n, p))) for i = 1:nb_samples]
+    results = [coloring(A, problem, algo; decompression_eltype = Float64) for A in As]
     Bs = [compress(Float64.(A), result) for (A, result) in zip(As, results)]
 
     bench_col = @benchmarkable begin
@@ -57,7 +59,7 @@ for structure in [:nonsymmetric, :symmetric],
     p in [2 / n, 5 / n, 10 / n]
 
     nb_samples = 5
-    As = [sparse(Symmetric(sprand(StableRNG(i), Bool, n, n, p))) for i in 1:nb_samples]
+    As = [sparse(Symmetric(sprand(StableRNG(i), Bool, n, n, p))) for i = 1:nb_samples]
     if structure == :symmetric
         gs = [SMC.AdjacencyGraph(A) for A in As]
         bench_ord = @benchmarkable begin

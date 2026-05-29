@@ -19,17 +19,21 @@ using SparseMatrixColorings:
 using Test
 
 const _ALL_ORDERS = (
-    NaturalOrder(), LargestFirst(), SmallestLast(), IncidenceDegree(), DynamicLargestFirst()
+    NaturalOrder(),
+    LargestFirst(),
+    SmallestLast(),
+    IncidenceDegree(),
+    DynamicLargestFirst(),
 )
 
 function test_coloring_decompression(
     A0::AbstractMatrix,
     problem::ColoringProblem{structure,partition},
     algo::GreedyColoringAlgorithm{decompression};
-    B0=nothing,
-    color0=nothing,
-    test_fast=false,
-    gpu=false,
+    B0 = nothing,
+    color0 = nothing,
+    test_fast = false,
+    gpu = false,
 ) where {structure,partition,decompression}
     color_vec = Vector{Int}[]
     @testset "$(typeof(A))" for A in matrix_versions(A0)
@@ -37,10 +41,14 @@ function test_coloring_decompression(
 
         if structure == :nonsymmetric && issymmetric(A)
             result = coloring(
-                A, problem, algo; decompression_eltype=Float32, symmetric_pattern=true
+                A,
+                problem,
+                algo;
+                decompression_eltype = Float32,
+                symmetric_pattern = true,
             )
         else
-            result = coloring(A, problem, algo; decompression_eltype=Float64)
+            result = coloring(A, problem, algo; decompression_eltype = Float64)
         end
         color = if partition == :column
             column_colors(result)
@@ -58,7 +66,7 @@ function test_coloring_decompression(
                 @test ncolors(result) == size(B, 1)
             end
             if test_fast
-                @test color == fast_coloring(A, problem, algo; symmetric_pattern=false)
+                @test color == fast_coloring(A, problem, algo; symmetric_pattern = false)
             end
         end
 
@@ -172,7 +180,9 @@ function test_coloring_decompression(
                 @test sparsity_pattern(result) === A  # identity of objects
                 @test decompress(float.(B), linresult) ≈ A0
                 @test decompress!(
-                    respectful_similar(A, float(eltype(B))), float.(B), linresult
+                    respectful_similar(A, float(eltype(B))),
+                    float.(B),
+                    linresult,
                 ) ≈ A0
             end
         end
@@ -187,9 +197,8 @@ function test_coloring_decompression(
 
     @testset "More orders is better" begin
         more_orders = (algo.orders..., _ALL_ORDERS...)
-        better_algo = GreedyColoringAlgorithm{decompression}(
-            more_orders; algo.postprocessing
-        )
+        better_algo =
+            GreedyColoringAlgorithm{decompression}(more_orders; algo.postprocessing)
         all_algos = [
             GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
             order in more_orders
@@ -206,16 +215,20 @@ function test_bicoloring_decompression(
     A0::AbstractMatrix,
     problem::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{decompression};
-    test_fast=false,
+    test_fast = false,
 ) where {decompression}
     @testset "$(typeof(A))" for A in matrix_versions(A0)
         yield()
         if issymmetric(A)
             result = coloring(
-                A, problem, algo; decompression_eltype=Float32, symmetric_pattern=true
+                A,
+                problem,
+                algo;
+                decompression_eltype = Float32,
+                symmetric_pattern = true,
             )
         else
-            result = coloring(A, problem, algo; decompression_eltype=Float64)
+            result = coloring(A, problem, algo; decompression_eltype = Float64)
         end
         Br, Bc = compress(A, result)
         row_color, column_color = row_colors(result), column_colors(result)
@@ -226,7 +239,7 @@ function test_bicoloring_decompression(
             @test ncolors(result) == size(Br, 1) + size(Bc, 2)
             if test_fast
                 @test (row_color, column_color) ==
-                    fast_coloring(A, problem, algo; symmetric_pattern=false)
+                      fast_coloring(A, problem, algo; symmetric_pattern = false)
             end
         end
 
@@ -234,10 +247,16 @@ function test_bicoloring_decompression(
             @test decompress(Br, Bc, result) ≈ A0
             @test decompress(Br, Bc, result) ≈ A0  # check result wasn't modified
             @test decompress!(
-                respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
+                respectful_similar(A, promote_eltype(Br, Bc)),
+                Br,
+                Bc,
+                result,
             ) ≈ A0
             @test decompress!(
-                respectful_similar(A, promote_eltype(Br, Bc)), Br, Bc, result
+                respectful_similar(A, promote_eltype(Br, Bc)),
+                Br,
+                Bc,
+                result,
             ) ≈ A0
         end
 
@@ -251,7 +270,10 @@ function test_bicoloring_decompression(
             @testset "Substitutable" begin
                 rank_nonzeros = rank_nonzeros_from_trees(result)
                 @test substitutable_bidirectional(
-                    A0, rank_nonzeros, row_color, column_color
+                    A0,
+                    rank_nonzeros,
+                    row_color,
+                    column_color,
                 )
             end
         end
@@ -259,9 +281,8 @@ function test_bicoloring_decompression(
 
     @testset "More orders is better" begin
         more_orders = (algo.orders..., _ALL_ORDERS...)
-        better_algo = GreedyColoringAlgorithm{decompression}(
-            more_orders; algo.postprocessing
-        )
+        better_algo =
+            GreedyColoringAlgorithm{decompression}(more_orders; algo.postprocessing)
         all_algos = [
             GreedyColoringAlgorithm{decompression}(order; algo.postprocessing) for
             order in more_orders
@@ -275,8 +296,8 @@ function test_bicoloring_decompression(
 end
 
 function test_structured_coloring_decompression(A::AbstractMatrix)
-    column_problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
-    row_problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+    column_problem = ColoringProblem(; structure = :nonsymmetric, partition = :column)
+    row_problem = ColoringProblem(; structure = :nonsymmetric, partition = :row)
     algo = GreedyColoringAlgorithm()
 
     # Column

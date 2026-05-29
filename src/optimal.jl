@@ -29,6 +29,10 @@ struct OptimalColoringAlgorithm{O} <: ADTypes.AbstractColoringAlgorithm
     assert_solved::Bool
 end
 
-function OptimalColoringAlgorithm(optimizer; silent::Bool=true, assert_solved::Bool=true)
+function OptimalColoringAlgorithm(
+    optimizer;
+    silent::Bool = true,
+    assert_solved::Bool = true,
+)
     return OptimalColoringAlgorithm(optimizer, silent, assert_solved)
 end

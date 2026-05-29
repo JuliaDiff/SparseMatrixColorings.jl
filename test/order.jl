@@ -81,7 +81,9 @@ end;
 
     for side in (1, 2)
         true_order = sort(
-            vertices(bg, Val(side)); by=v -> degree_dist2(bg, Val(side), v), rev=true
+            vertices(bg, Val(side));
+            by = v -> degree_dist2(bg, Val(side), v),
+            rev = true,
         )
         @test vertices(bg, Val(side), LargestFirst()) == true_order
     end
@@ -90,13 +92,13 @@ end;
 @testset "Dynamic degree-based orders" begin
     @testset "$order" for order in [
         SmallestLast(),
-        SmallestLast(; reproduce_colpack=true),
+        SmallestLast(; reproduce_colpack = true),
         IncidenceDegree(),
-        IncidenceDegree(; reproduce_colpack=true),
+        IncidenceDegree(; reproduce_colpack = true),
         DynamicLargestFirst(),
-        DynamicLargestFirst(; reproduce_colpack=true),
+        DynamicLargestFirst(; reproduce_colpack = true),
         DynamicDegreeBasedOrder{:forward,:high2low}(),
-        DynamicDegreeBasedOrder{:forward,:high2low}(; reproduce_colpack=true),
+        DynamicDegreeBasedOrder{:forward,:high2low}(; reproduce_colpack = true),
     ]
         @testset "AdjacencyGraph" begin
             for (n, p) in Iterators.product(20:20:100, 0.0:0.1:0.2)
@@ -123,10 +125,9 @@ end;
 end;
 
 @testset "PerfectEliminationOrder" begin
-    problem = ColoringProblem(; structure=:symmetric, partition=:column)
-    substitution_algo = GreedyColoringAlgorithm(
-        PerfectEliminationOrder(); decompression=:substitution
-    )
+    problem = ColoringProblem(; structure = :symmetric, partition = :column)
+    substitution_algo =
+        GreedyColoringAlgorithm(PerfectEliminationOrder(); decompression = :substitution)
 
     # band graphs
     for (n, m) in ((800, 80), (400, 40), (200, 20), (100, 10))
@@ -158,7 +159,7 @@ end
         algo = GreedyColoringAlgorithm(NaturalOrder())
         better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
         @test ncolors(coloring(A, problem, better_algo)) <
-            ncolors(coloring(A, problem, algo))
+              ncolors(coloring(A, problem, algo))
     end
     @testset "Row coloring" begin
         A = [
@@ -171,7 +172,7 @@ end
         algo = GreedyColoringAlgorithm(NaturalOrder())
         better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
         @test ncolors(coloring(A, problem, better_algo)) <
-            ncolors(coloring(A, problem, algo))
+              ncolors(coloring(A, problem, algo))
     end
     @testset "Star coloring" begin
         A = [
@@ -185,7 +186,7 @@ end
         algo = GreedyColoringAlgorithm(NaturalOrder())
         better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
         @test ncolors(coloring(A, problem, better_algo)) <
-            ncolors(coloring(A, problem, algo))
+              ncolors(coloring(A, problem, algo))
     end
     @testset "Acyclic coloring" begin
         A = [
@@ -199,11 +200,10 @@ end
         ]
         problem = ColoringProblem{:symmetric,:column}()
         algo = GreedyColoringAlgorithm{:substitution}(NaturalOrder())
-        better_algo = GreedyColoringAlgorithm{:substitution}((
-            NaturalOrder(), LargestFirst()
-        ))
+        better_algo =
+            GreedyColoringAlgorithm{:substitution}((NaturalOrder(), LargestFirst()))
         @test ncolors(coloring(A, problem, better_algo)) <
-            ncolors(coloring(A, problem, algo))
+              ncolors(coloring(A, problem, algo))
     end
     @testset "Star bicoloring" begin
         A = [
@@ -217,7 +217,7 @@ end
         algo = GreedyColoringAlgorithm(NaturalOrder())
         better_algo = GreedyColoringAlgorithm((NaturalOrder(), LargestFirst()))
         @test ncolors(coloring(A, problem, better_algo)) <
-            ncolors(coloring(A, problem, algo))
+              ncolors(coloring(A, problem, algo))
     end
     @testset "Acyclic bicoloring" begin
         A = [
@@ -233,10 +233,9 @@ end
         ]
         problem = ColoringProblem{:nonsymmetric,:bidirectional}()
         algo = GreedyColoringAlgorithm{:substitution}(NaturalOrder())
-        better_algo = GreedyColoringAlgorithm{:substitution}((
-            NaturalOrder(), LargestFirst()
-        ))
+        better_algo =
+            GreedyColoringAlgorithm{:substitution}((NaturalOrder(), LargestFirst()))
         @test ncolors(coloring(A, problem, better_algo)) <
-            ncolors(coloring(A, problem, algo))
+              ncolors(coloring(A, problem, algo))
     end
 end
