@@ -48,13 +48,13 @@ function compress(A, result::AbstractColoringResult{structure,:column}) where {s
     group = column_groups(result)
     if isempty(group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        B_model = stack([Int[]]; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+        B_model = stack([Int[]]; dims = 2) do g
+            dropdims(sum(A[:, g]; dims = 2); dims = 2)
         end
         B = similar(B_model, size(A, 1), 0)
     else
-        B = stack(group; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+        B = stack(group; dims = 2) do g
+            dropdims(sum(A[:, g]; dims = 2); dims = 2)
         end
     end
     return B
@@ -64,43 +64,44 @@ function compress(A, result::AbstractColoringResult{structure,:row}) where {stru
     group = row_groups(result)
     if isempty(group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        B_model = stack([Int[]]; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+        B_model = stack([Int[]]; dims = 1) do g
+            dropdims(sum(A[g, :]; dims = 1); dims = 1)
         end
         B = similar(B_model, 0, size(A, 2))
     else
-        B = stack(group; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+        B = stack(group; dims = 1) do g
+            dropdims(sum(A[g, :]; dims = 1); dims = 1)
         end
     end
     return B
 end
 
 function compress(
-    A, result::AbstractColoringResult{structure,:bidirectional}
+    A,
+    result::AbstractColoringResult{structure,:bidirectional},
 ) where {structure}
     row_group = row_groups(result)
     column_group = column_groups(result)
     if isempty(row_group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        Br_model = stack([Int[]]; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+        Br_model = stack([Int[]]; dims = 1) do g
+            dropdims(sum(A[g, :]; dims = 1); dims = 1)
         end
         Br = similar(Br_model, 0, size(A, 2))
     else
-        Br = stack(row_group; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+        Br = stack(row_group; dims = 1) do g
+            dropdims(sum(A[g, :]; dims = 1); dims = 1)
         end
     end
     if isempty(column_group)
         # ensure we get a Matrix and not a SparseMatrixCSC
-        Bc_model = stack([Int[]]; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+        Bc_model = stack([Int[]]; dims = 2) do g
+            dropdims(sum(A[:, g]; dims = 2); dims = 2)
         end
         Bc = similar(Bc_model, size(A, 1), 0)
     else
-        Bc = stack(column_group; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+        Bc = stack(column_group; dims = 2) do g
+            dropdims(sum(A[:, g]; dims = 2); dims = 2)
         end
     end
     return Br, Bc
@@ -355,7 +356,10 @@ function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::ColumnColorin
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix, b::AbstractVector, c::Integer, result::ColumnColoringResult
+    A::AbstractMatrix,
+    b::AbstractVector,
+    c::Integer,
+    result::ColumnColoringResult,
 )
     (; bg, group) = result
     S = bg.S2
@@ -382,7 +386,10 @@ function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::ColumnColori
 end
 
 function decompress_single_color!(
-    A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::ColumnColoringResult
+    A::SparseMatrixCSC,
+    b::AbstractVector,
+    c::Integer,
+    result::ColumnColoringResult,
 )
     (; bg, group) = result
     S = bg.S2
@@ -417,7 +424,10 @@ function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::RowColoringRe
 end
 
 function decompress_single_color!(
-    A::AbstractMatrix, b::AbstractVector, c::Integer, result::RowColoringResult
+    A::AbstractMatrix,
+    b::AbstractVector,
+    c::Integer,
+    result::RowColoringResult,
 )
     (; bg, group) = result
     S, Sᵀ = bg.S2, bg.S1
@@ -446,7 +456,10 @@ end
 ## StarSetColoringResult
 
 function decompress!(
-    A::AbstractMatrix, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
+    A::AbstractMatrix,
+    B::AbstractMatrix,
+    result::StarSetColoringResult,
+    uplo::Symbol = :F,
 )
     (; ag, compressed_indices) = result
     (; S) = ag
@@ -470,7 +483,7 @@ function decompress_single_color!(
     b::AbstractVector,
     c::Integer,
     result::StarSetColoringResult,
-    uplo::Symbol=:F,
+    uplo::Symbol = :F,
 )
     (; ag, compressed_indices, group) = result
     (; S) = ag
@@ -503,7 +516,10 @@ function decompress_single_color!(
 end
 
 function decompress!(
-    A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
+    A::SparseMatrixCSC,
+    B::AbstractMatrix,
+    result::StarSetColoringResult,
+    uplo::Symbol = :F,
 )
     (; ag, compressed_indices) = result
     (; S) = ag
@@ -532,7 +548,10 @@ end
 ## TreeSetColoringResult
 
 function decompress!(
-    A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
+    A::AbstractMatrix,
+    B::AbstractMatrix,
+    result::TreeSetColoringResult,
+    uplo::Symbol = :F,
 )
     (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) =
         result
@@ -555,13 +574,13 @@ function decompress!(
     end
 
     # Recover the off-diagonal coefficients of A
-    for k in 1:nt
+    for k = 1:nt
         # Positions of the first and last edges of the tree
         first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
+        last = tree_edge_indices[k+1] - 1
 
         # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
+        for pos = first:last
             (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
@@ -569,7 +588,7 @@ function decompress!(
         (_, root) = reverse_bfs_orders[last]
         buffer_right_type[root] = zero(R)
 
-        for pos in first:last
+        for pos = first:last
             (i, j) = reverse_bfs_orders[pos]
             val = B[i, color[j]] - buffer_right_type[i]
             buffer_right_type[j] = buffer_right_type[j] + val
@@ -604,7 +623,7 @@ function decompress_csc!(
     A_colptr::AbstractVector{<:Integer},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
-    uplo::Symbol=:F,
+    uplo::Symbol = :F,
 ) where {R<:Real}
     (;
         ag,
@@ -636,7 +655,7 @@ function decompress_csc!(
         elseif uplo == :U
             for i in diagonal_indices
                 # A[i, i] is the last element in column i
-                nzind = A_colptr[i + 1] - 1
+                nzind = A_colptr[i+1] - 1
                 nzA[nzind] = B[i, color[i]]
             end
         else  # uplo == :F
@@ -651,13 +670,13 @@ function decompress_csc!(
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in 1:nt
+    for k = 1:nt
         # Positions of the first and last edges of the tree
         first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
+        last = tree_edge_indices[k+1] - 1
 
         # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
+        for pos = first:last
             (vertex, _) = reverse_bfs_orders[pos]
             buffer_right_type[vertex] = zero(R)
         end
@@ -665,7 +684,7 @@ function decompress_csc!(
         (_, root) = reverse_bfs_orders[last]
         buffer_right_type[root] = zero(R)
 
-        for pos in first:last
+        for pos = first:last
             (i, j) = reverse_bfs_orders[pos]
             counter += 1
             val = B[i, color[j]] - buffer_right_type[i]
@@ -714,7 +733,7 @@ function decompress!(
     A::SparseMatrixCSC{R},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
-    uplo::Symbol=:F,
+    uplo::Symbol = :F,
 ) where {R<:Real}
     check_compatible_pattern(A, result.ag, uplo)
     decompress_csc!(nonzeros(A), A.colptr, B, result, uplo)
@@ -727,7 +746,7 @@ function decompress!(
     A::AbstractMatrix,
     B::AbstractMatrix,
     result::LinearSystemColoringResult,
-    uplo::Symbol=:F,
+    uplo::Symbol = :F,
 )
     (; ag, color, strict_upper_nonzero_inds, M_factorization, strict_upper_nonzeros_A) =
         result
@@ -781,16 +800,17 @@ function _join_compressed!(result::BicoloringResult, Br::AbstractMatrix, Bc::Abs
             copyto!(view(Br_and_Bc, 1:n, c), view(Br, symmetric_to_row[c], :))
         end
         if symmetric_to_column[c] > 0  # some columns were colored with the symmetric color c
-            copyto!(
-                view(Br_and_Bc, (n + 1):(n + m), c), view(Bc, :, symmetric_to_column[c])
-            )
+            copyto!(view(Br_and_Bc, (n+1):(n+m), c), view(Bc, :, symmetric_to_column[c]))
         end
     end
     return Br_and_Bc
 end
 
 function decompress!(
-    A::AbstractMatrix, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+    A::AbstractMatrix,
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::BicoloringResult,
 )
     (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)
@@ -802,17 +822,20 @@ function decompress!(
     decompress!(A_and_noAᵀ, Br_and_Bc, symmetric_result, :L)
     rvA = rowvals(A_and_noAᵀ)
     nzA = nonzeros(A_and_noAᵀ)
-    for j in 1:n
+    for j = 1:n
         for k in nzrange(A_and_noAᵀ, j)
             i = rvA[k]
-            A[i - n, j] = nzA[k]
+            A[i-n, j] = nzA[k]
         end
     end
     return A
 end
 
 function decompress!(
-    A::SparseMatrixCSC, Br::AbstractMatrix, Bc::AbstractMatrix, result::BicoloringResult
+    A::SparseMatrixCSC,
+    Br::AbstractMatrix,
+    Bc::AbstractMatrix,
+    result::BicoloringResult,
 )
     (; large_colptr, large_rowval, symmetric_result) = result
     m, n = size(A)

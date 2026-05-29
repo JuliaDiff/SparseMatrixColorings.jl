@@ -21,8 +21,8 @@ function optimal_distance2_coloring(
     bg::BipartiteGraph,
     ::Val{side},
     optimizer::O;
-    silent::Bool=true,
-    assert_solved::Bool=true,
+    silent::Bool = true,
+    assert_solved::Bool = true,
 ) where {side,O}
     other_side = 3 - side
     n = nb_vertices(bg, Val(side))
@@ -66,14 +66,22 @@ end
 function ADTypes.column_coloring(A::AbstractMatrix, algo::OptimalColoringAlgorithm)
     bg = BipartiteGraph(A)
     return optimal_distance2_coloring(
-        bg, Val(2), algo.optimizer; algo.silent, algo.assert_solved
+        bg,
+        Val(2),
+        algo.optimizer;
+        algo.silent,
+        algo.assert_solved,
     )
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::OptimalColoringAlgorithm)
     bg = BipartiteGraph(A)
     return optimal_distance2_coloring(
-        bg, Val(1), algo.optimizer; algo.silent, algo.assert_solved
+        bg,
+        Val(1),
+        algo.optimizer;
+        algo.silent,
+        algo.assert_solved,
     )
 end
 

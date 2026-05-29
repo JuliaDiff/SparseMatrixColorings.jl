@@ -22,12 +22,10 @@ function matrix_versions(A::AbstractMatrix)
         adjoint(sparse(adjoint(A_sparse))),
     ]
     if issymmetric(A)
-        lower_triangles = [
-            Matrix(LowerTriangular(A_dense)), sparse(LowerTriangular(A_sparse))
-        ]
-        upper_triangles = [
-            Matrix(UpperTriangular(A_dense)), sparse(UpperTriangular(A_sparse))
-        ]
+        lower_triangles =
+            [Matrix(LowerTriangular(A_dense)), sparse(LowerTriangular(A_sparse))]
+        upper_triangles =
+            [Matrix(UpperTriangular(A_dense)), sparse(UpperTriangular(A_sparse))]
         symmetric_versions = vcat(
             Symmetric.(versions),
             Hermitian.(versions),
@@ -102,13 +100,13 @@ function check_compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::S
         if uplo == :L
             throw(
                 DimensionMismatch(
-                    "`A` and `tril(ag.S)` must have the same sparsity pattern."
+                    "`A` and `tril(ag.S)` must have the same sparsity pattern.",
                 ),
             )
         elseif uplo == :U
             throw(
                 DimensionMismatch(
-                    "`A` and `triu(ag.S)` must have the same sparsity pattern."
+                    "`A` and `triu(ag.S)` must have the same sparsity pattern.",
                 ),
             )
         else  # uplo == :F

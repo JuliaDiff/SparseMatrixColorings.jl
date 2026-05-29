@@ -8,22 +8,31 @@ using cuSPARSE: AbstractCuSparseMatrix, CuSparseMatrixCSC, CuSparseMatrixCSR
 ## CSC Result
 
 function SMC.ColumnColoringResult(
-    A::CuSparseMatrixCSC, bg::SMC.BipartiteGraph{T}, color::Vector{<:Integer}
+    A::CuSparseMatrixCSC,
+    bg::SMC.BipartiteGraph{T},
+    color::Vector{<:Integer},
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.column_csc_indices(bg, color)
-    additional_info = (; compressed_indices_gpu_csc=CuVector(compressed_indices))
+    additional_info = (; compressed_indices_gpu_csc = CuVector(compressed_indices))
     return SMC.ColumnColoringResult(
-        A, bg, color, group, compressed_indices, additional_info
+        A,
+        bg,
+        color,
+        group,
+        compressed_indices,
+        additional_info,
     )
 end
 
 function SMC.RowColoringResult(
-    A::CuSparseMatrixCSC, bg::SMC.BipartiteGraph{T}, color::Vector{<:Integer}
+    A::CuSparseMatrixCSC,
+    bg::SMC.BipartiteGraph{T},
+    color::Vector{<:Integer},
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.row_csc_indices(bg, color)
-    additional_info = (; compressed_indices_gpu_csc=CuVector(compressed_indices))
+    additional_info = (; compressed_indices_gpu_csc = CuVector(compressed_indices))
     return SMC.RowColoringResult(A, bg, color, group, compressed_indices, additional_info)
 end
 
@@ -35,33 +44,47 @@ function SMC.StarSetColoringResult(
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.star_csc_indices(ag, color, star_set)
-    additional_info = (; compressed_indices_gpu_csc=CuVector(compressed_indices))
+    additional_info = (; compressed_indices_gpu_csc = CuVector(compressed_indices))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, additional_info
+        A,
+        ag,
+        color,
+        group,
+        compressed_indices,
+        additional_info,
     )
 end
 
 ## CSR Result
 
 function SMC.ColumnColoringResult(
-    A::CuSparseMatrixCSR, bg::SMC.BipartiteGraph{T}, color::Vector{<:Integer}
+    A::CuSparseMatrixCSR,
+    bg::SMC.BipartiteGraph{T},
+    color::Vector{<:Integer},
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.column_csc_indices(bg, color)
     compressed_indices_csr = SMC.column_csr_indices(bg, color)
-    additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices_csr))
+    additional_info = (; compressed_indices_gpu_csr = CuVector(compressed_indices_csr))
     return SMC.ColumnColoringResult(
-        A, bg, color, group, compressed_indices, additional_info
+        A,
+        bg,
+        color,
+        group,
+        compressed_indices,
+        additional_info,
     )
 end
 
 function SMC.RowColoringResult(
-    A::CuSparseMatrixCSR, bg::SMC.BipartiteGraph{T}, color::Vector{<:Integer}
+    A::CuSparseMatrixCSR,
+    bg::SMC.BipartiteGraph{T},
+    color::Vector{<:Integer},
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.row_csc_indices(bg, color)
     compressed_indices_csr = SMC.row_csr_indices(bg, color)
-    additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices_csr))
+    additional_info = (; compressed_indices_gpu_csr = CuVector(compressed_indices_csr))
     return SMC.RowColoringResult(A, bg, color, group, compressed_indices, additional_info)
 end
 
@@ -73,9 +96,14 @@ function SMC.StarSetColoringResult(
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.star_csc_indices(ag, color, star_set)
-    additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices))
+    additional_info = (; compressed_indices_gpu_csr = CuVector(compressed_indices))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, additional_info
+        A,
+        ag,
+        color,
+        group,
+        compressed_indices,
+        additional_info,
     )
 end
 
@@ -84,7 +112,9 @@ end
 for R in (:ColumnColoringResult, :RowColoringResult)
     # loop to avoid method ambiguity
     @eval function SMC.decompress!(
-        A::CuSparseMatrixCSC, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSC}
+        A::CuSparseMatrixCSC,
+        B::CuMatrix,
+        result::SMC.$R{<:CuSparseMatrixCSC},
     )
         compressed_indices = result.additional_info.compressed_indices_gpu_csc
         copyto!(A.nzVal, view(B, compressed_indices))
@@ -92,7 +122,9 @@ for R in (:ColumnColoringResult, :RowColoringResult)
     end
 
     @eval function SMC.decompress!(
-        A::CuSparseMatrixCSR, B::CuMatrix, result::SMC.$R{<:CuSparseMatrixCSR}
+        A::CuSparseMatrixCSR,
+        B::CuMatrix,
+        result::SMC.$R{<:CuSparseMatrixCSR},
     )
         compressed_indices = result.additional_info.compressed_indices_gpu_csr
         copyto!(A.nzVal, view(B, compressed_indices))
@@ -104,12 +136,12 @@ function SMC.decompress!(
     A::CuSparseMatrixCSC,
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSC},
-    uplo::Symbol=:F,
+    uplo::Symbol = :F,
 )
     if uplo != :F
         throw(
             SMC.UnsupportedDecompressionError(
-                "Single-triangle decompression is not supported on GPU matrices"
+                "Single-triangle decompression is not supported on GPU matrices",
             ),
         )
     end
@@ -122,12 +154,12 @@ function SMC.decompress!(
     A::CuSparseMatrixCSR,
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSR},
-    uplo::Symbol=:F,
+    uplo::Symbol = :F,
 )
     if uplo != :F
         throw(
             SMC.UnsupportedDecompressionError(
-                "Single-triangle decompression is not supported on GPU matrices"
+                "Single-triangle decompression is not supported on GPU matrices",
             ),
         )
     end

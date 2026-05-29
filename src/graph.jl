@@ -30,7 +30,7 @@ Base.axes(S::SparsityPatternCSC, d::Integer) = Base.OneTo(size(S, d))
 
 SparseArrays.nnz(S::SparsityPatternCSC) = length(S.rowval)
 SparseArrays.rowvals(S::SparsityPatternCSC) = S.rowval
-SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j + 1] - 1)
+SparseArrays.nzrange(S::SparsityPatternCSC, j::Integer) = S.colptr[j]:(S.colptr[j+1]-1)
 
 # Needed if using `coloring(::SparsityPatternCSC, ...)`
 function Base.similar(A::SparsityPatternCSC, ::Type{T}) where {T}
@@ -54,23 +54,23 @@ function Base.transpose(S::SparsityPatternCSC{T}) where {T}
 
     # Count the number of non-zeros for each row of A.
     # It corresponds to the number of non-zeros for each column of B = Aᵀ.
-    for k in 1:nnzA
+    for k = 1:nnzA
         i = A_rowval[k]
         B_colptr[i] += 1
     end
 
     # Compute the cumulative sum to determine the starting positions of rows in B_rowval
     counter = 1
-    for col in 1:m
+    for col = 1:m
         nnz_col = B_colptr[col]
         B_colptr[col] = counter
         counter += nnz_col
     end
-    B_colptr[m + 1] = counter
+    B_colptr[m+1] = counter
 
     # Store the row indices for each column of B = Aᵀ
-    for j in 1:n
-        for index in A_colptr[j]:(A_colptr[j + 1] - 1)
+    for j = 1:n
+        for index = A_colptr[j]:(A_colptr[j+1]-1)
             i = A_rowval[index]
 
             # Update B_rowval for the non-zero B[j,i].
@@ -82,8 +82,8 @@ function Base.transpose(S::SparsityPatternCSC{T}) where {T}
     end
 
     # Fix offsets of B_colptr to restore correct starting positions
-    for col in m:-1:2
-        B_colptr[col] = B_colptr[col - 1]
+    for col = m:-1:2
+        B_colptr[col] = B_colptr[col-1]
     end
     B_colptr[1] = 1
 
@@ -93,7 +93,7 @@ end
 # copied from SparseArrays.jl
 function Base.getindex(S::SparsityPatternCSC, i0::Integer, i1::Integer)
     r1 = Int(S.colptr[i1])
-    r2 = Int(S.colptr[i1 + 1] - 1)
+    r2 = Int(S.colptr[i1+1] - 1)
     (r1 > r2) && return false
     r1 = searchsortedfirst(rowvals(S), i0, r1, r2, Base.Order.Forward)
     return ((r1 > r2) || (rowvals(S)[r1] != i0)) ? false : true
@@ -117,11 +117,11 @@ function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool
     edge_to_index = Vector{T}(undef, 2 * nnzS)
 
     # Update rowval and colptr for the block A
-    for i in 1:nnzS
+    for i = 1:nnzS
         rowval[i] = S.rowval[i] + n
         edge_to_index[i] = i
     end
-    for j in 1:n
+    for j = 1:n
         colptr[j] = S.colptr[j]
     end
 
@@ -131,48 +131,48 @@ function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool
         offsets = colptr
 
         # We use the sparsity pattern of A for Aᵀ
-        for k in 1:nnzS
+        for k = 1:nnzS
             r = S.rowval[k]
-            rowval[nnzS + k] = r
-            pos = S.colptr[r] + offsets[n + r]
-            edge_to_index[nnzS + pos] = edge_to_index[k]
-            offsets[n + r] += 1
+            rowval[nnzS+k] = r
+            pos = S.colptr[r] + offsets[n+r]
+            edge_to_index[nnzS+pos] = edge_to_index[k]
+            offsets[n+r] += 1
         end
         # m and n are identical because symmetric_pattern is true
-        for j in 1:m
-            colptr[n + j] = nnzS + S.colptr[j]
+        for j = 1:m
+            colptr[n+j] = nnzS + S.colptr[j]
         end
-        colptr[p + 1] = 2 * nnzS + 1
+        colptr[p+1] = 2 * nnzS + 1
     else
         # We need to determine the sparsity pattern of Aᵀ
         # We adapt the code of transpose(SparsityPatternCSC) in graph.jl
-        for k in 1:nnzS
+        for k = 1:nnzS
             i = S.rowval[k]
-            colptr[n + i] += 1
+            colptr[n+i] += 1
         end
 
         counter = 1
-        for col in (n + 1):p
+        for col = (n+1):p
             nnz_col = colptr[col]
             colptr[col] = nnzS + counter
             counter += nnz_col
         end
 
-        for j in 1:n
-            for index in S.colptr[j]:(S.colptr[j + 1] - 1)
+        for j = 1:n
+            for index = S.colptr[j]:(S.colptr[j+1]-1)
                 i = S.rowval[index]
-                pos = colptr[n + i]
+                pos = colptr[n+i]
                 rowval[pos] = j
                 edge_to_index[pos] = edge_to_index[index]
-                colptr[n + i] += 1
+                colptr[n+i] += 1
             end
         end
 
-        colptr[p + 1] = nnzS + counter
-        for col in p:-1:(n + 2)
-            colptr[col] = colptr[col - 1]
+        colptr[p+1] = nnzS + counter
+        for col = p:-1:(n+2)
+            colptr[col] = colptr[col-1]
         end
-        colptr[n + 1] = nnzS + 1
+        colptr[n+1] = nnzS + 1
     end
 
     # Create the SparsityPatternCSC of the augmented adjacency matrix
@@ -243,21 +243,21 @@ function AdjacencyGraph(
     S::SparsityPatternCSC{T},
     edge_to_index::Vector{T},
     nb_self_loops::Int;
-    augmented_graph::Bool=false,
+    augmented_graph::Bool = false,
 ) where {T}
     return AdjacencyGraph{T,augmented_graph}(S, edge_to_index, nb_self_loops)
 end
 
-function AdjacencyGraph(S::SparsityPatternCSC; augmented_graph::Bool=false)
+function AdjacencyGraph(S::SparsityPatternCSC; augmented_graph::Bool = false)
     edge_to_index, nb_self_loops = build_edge_to_index(S)
     return AdjacencyGraph(S, edge_to_index, nb_self_loops; augmented_graph)
 end
 
-function AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool=false)
+function AdjacencyGraph(A::SparseMatrixCSC; augmented_graph::Bool = false)
     return AdjacencyGraph(SparsityPatternCSC(A); augmented_graph)
 end
 
-function AdjacencyGraph(A::AbstractMatrix; augmented_graph::Bool=false)
+function AdjacencyGraph(A::AbstractMatrix; augmented_graph::Bool = false)
     return AdjacencyGraph(SparseMatrixCSC(A); augmented_graph)
 end
 
@@ -281,12 +281,12 @@ function neighbors_with_edge_indices(g::AdjacencyGraph, v::Integer)
     return zip(neighbors_v, edges_indices_v)
 end
 
-degree(g::AdjacencyGraph{T,true}, v::Integer) where {T} = g.S.colptr[v + 1] - g.S.colptr[v]
+degree(g::AdjacencyGraph{T,true}, v::Integer) where {T} = g.S.colptr[v+1] - g.S.colptr[v]
 
 function degree(g::AdjacencyGraph{T,false}, v::Integer) where {T}
     neigh = neighbors(g, v)
     has_selfloop = insorted(v, neigh)
-    return g.S.colptr[v + 1] - g.S.colptr[v] - has_selfloop
+    return g.S.colptr[v+1] - g.S.colptr[v] - has_selfloop
 end
 
 nb_edges(g::AdjacencyGraph) = (nnz(g.S) - g.nb_self_loops) ÷ 2
@@ -351,11 +351,11 @@ end
 
 Base.eltype(::BipartiteGraph{T}) where {T} = T
 
-function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool=false)
+function BipartiteGraph(A::AbstractMatrix; symmetric_pattern::Bool = false)
     return BipartiteGraph(SparseMatrixCSC(A); symmetric_pattern)
 end
 
-function BipartiteGraph(A::SparseMatrixCSC; symmetric_pattern::Bool=false)
+function BipartiteGraph(A::SparseMatrixCSC; symmetric_pattern::Bool = false)
     S2 = SparsityPatternCSC(A)  # columns to rows
     if symmetric_pattern
         checksquare(A)  # proxy for checking full symmetry
@@ -419,7 +419,10 @@ function degree_dist2(bg::BipartiteGraph{T}, ::Val{side}, v::Integer) where {T,s
 end
 
 function has_neighbor_dist2(
-    bg::BipartiteGraph, ::Val{side}, v::Integer, u::Integer
+    bg::BipartiteGraph,
+    ::Val{side},
+    v::Integer,
+    u::Integer,
 ) where {side}
     other_side = 3 - side
     for w1 in neighbors(bg, Val(side), v)
@@ -433,7 +436,10 @@ function has_neighbor_dist2(
 end
 
 function degree_dist2_in_subset(
-    bg::BipartiteGraph, ::Val{side}, v::Integer, subset::AbstractVector{<:Integer}
+    bg::BipartiteGraph,
+    ::Val{side},
+    v::Integer,
+    subset::AbstractVector{<:Integer},
 ) where {side}
     d = 0
     for u in subset

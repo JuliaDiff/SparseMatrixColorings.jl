@@ -22,9 +22,9 @@ nbunique(x) = length(unique(x))
 
 _N(args...) = vertices(args..., NaturalOrder())
 _LF(args...) = vertices(args..., LargestFirst())
-_SL(args...) = vertices(args..., SmallestLast(; reproduce_colpack=true))
-_ID(args...) = vertices(args..., IncidenceDegree(; reproduce_colpack=true))
-_DLF(args...) = vertices(args..., DynamicLargestFirst(; reproduce_colpack=true))
+_SL(args...) = vertices(args..., SmallestLast(; reproduce_colpack = true))
+_ID(args...) = vertices(args..., IncidenceDegree(; reproduce_colpack = true))
+_DLF(args...) = vertices(args..., DynamicLargestFirst(; reproduce_colpack = true))
 
 ## Distance-2 coloring
 
@@ -32,9 +32,8 @@ _DLF(args...) = vertices(args..., DynamicLargestFirst(; reproduce_colpack=true))
 Comparison with Tables VI and VII of the ColPack paper
 =#
 
-colpack_table_6_7 = CSV.read(
-    joinpath(@__DIR__, "reference", "colpack_table_6_7.csv"), DataFrame
-)
+colpack_table_6_7 =
+    CSV.read(joinpath(@__DIR__, "reference", "colpack_table_6_7.csv"), DataFrame)
 
 @testset verbose = true "Distance-2 coloring (ColPack paper)" begin
     @testset "$(row[:name])" for row in eachrow(colpack_table_6_7)
@@ -50,16 +49,16 @@ colpack_table_6_7 = CSV.read(
         end
         @testset "Natural" begin
             @test nbunique(partial_distance2_coloring(bg, Val(1), _N(bg, Val(1)))) ==
-                row[:N1]
+                  row[:N1]
             @test nbunique(partial_distance2_coloring(bg, Val(2), _N(bg, Val(2)))) ==
-                row[:N2]
+                  row[:N2]
         end
         yield()
         @testset "LargestFirst" begin
             @test nbunique(partial_distance2_coloring(bg, Val(1), _LF(bg, Val(1)))) ==
-                row[:LF1]
+                  row[:LF1]
             @test nbunique(partial_distance2_coloring(bg, Val(2), _LF(bg, Val(2)))) ==
-                row[:LF2]
+                  row[:LF2]
         end
         yield()
         if row[:name] == "af23560"
@@ -72,23 +71,23 @@ colpack_table_6_7 = CSV.read(
         end
         @testset "SmallestLast" begin
             @test nbunique(partial_distance2_coloring(bg, Val(1), _SL(bg, Val(1)))) ==
-                row[:SL1]
+                  row[:SL1]
             @test nbunique(partial_distance2_coloring(bg, Val(2), _SL(bg, Val(2)))) ==
-                row[:SL2]
+                  row[:SL2]
         end
         yield()
         @testset "IncidenceDegree" begin
             @test nbunique(partial_distance2_coloring(bg, Val(1), _ID(bg, Val(1)))) ==
-                row[:ID1]
+                  row[:ID1]
             @test nbunique(partial_distance2_coloring(bg, Val(2), _ID(bg, Val(2)))) ==
-                row[:ID2]
+                  row[:ID2]
         end
         yield()
         @testset "DynamicLargestFirst" begin
             @test nbunique(partial_distance2_coloring(bg, Val(1), _DLF(bg, Val(1)))) ==
-                row[:DLF1]
+                  row[:DLF1]
             @test nbunique(partial_distance2_coloring(bg, Val(2), _DLF(bg, Val(2)))) ==
-                row[:DLF2]
+                  row[:DLF2]
         end
         yield()
     end
@@ -98,9 +97,8 @@ end;
 Comparison with Tables 3.1 and 3.2 of "What color is your Jacobian?"
 =#
 
-what_table_31_32 = CSV.read(
-    joinpath(@__DIR__, "reference", "what_table_31_32.csv"), DataFrame
-)
+what_table_31_32 =
+    CSV.read(joinpath(@__DIR__, "reference", "what_table_31_32.csv"), DataFrame)
 
 @testset "Distance-2 coloring (survey paper)" begin
     @testset "$(row[:name])" for row in eachrow(what_table_31_32)
@@ -128,9 +126,8 @@ end;
 
 ## Star coloring
 
-what_table_41_42 = CSV.read(
-    joinpath(@__DIR__, "reference", "what_table_41_42.csv"), DataFrame
-)
+what_table_41_42 =
+    CSV.read(joinpath(@__DIR__, "reference", "what_table_41_42.csv"), DataFrame)
 
 @testset "Star coloring (survey paper)" begin
     @testset "$(row[:name])" for row in eachrow(what_table_41_42)

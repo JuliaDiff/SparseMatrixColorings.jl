@@ -34,7 +34,7 @@ function postprocess!(
         num_colors_useless = 0
 
         # determine what are the useless colors and compute the offsets
-        for ci in 1:nb_colors
+        for ci = 1:nb_colors
             if color_used[ci]
                 offsets[ci] = num_colors_useless
             else
@@ -109,19 +109,21 @@ function postprocess_with_star_set!(
 end
 
 function postprocess_with_tree_set!(
-    color_used::Vector{Bool}, color::AbstractVector{<:Integer}, tree_set::TreeSet
+    color_used::Vector{Bool},
+    color::AbstractVector{<:Integer},
+    tree_set::TreeSet,
 )
     # only the colors of non-leaf vertices are used
     (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = tree_set
     nb_trivial_trees = 0
 
     # Iterate through all non-trivial trees
-    for k in 1:nt
+    for k = 1:nt
         # Position of the first edge in the tree
         first = tree_edge_indices[k]
 
         # Total number of edges in the tree
-        ne_tree = tree_edge_indices[k + 1] - first
+        ne_tree = tree_edge_indices[k+1] - first
 
         # Check if we have more than one edge in the tree (non-trivial tree)
         if ne_tree > 1
@@ -143,12 +145,12 @@ function postprocess_with_tree_set!(
 
     # Process the trivial trees (if any)
     if nb_trivial_trees > 0
-        for k in 1:nt
+        for k = 1:nt
             # Position of the first edge in the tree
             first = tree_edge_indices[k]
 
             # Total number of edges in the tree
-            ne_tree = tree_edge_indices[k + 1] - first
+            ne_tree = tree_edge_indices[k+1] - first
 
             # Check if we have exactly one edge in the tree
             if ne_tree == 1

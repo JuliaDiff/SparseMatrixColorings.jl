@@ -38,7 +38,9 @@ function find_root!(forest::Forest{<:Integer}, index_edge::Integer)
 end
 
 function root_union!(
-    forest::Forest{T}, index_edge1::Integer, index_edge2::Integer
+    forest::Forest{T},
+    index_edge1::Integer,
+    index_edge2::Integer,
 ) where {T<:Integer}
     parents = forest.parents
     rks = forest.ranks

@@ -27,12 +27,17 @@ function partial_distance2_coloring(
     bg::BipartiteGraph{T},
     ::Val{side},
     vertices_in_order::AbstractVector{<:Integer};
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    forced_colors::Union{AbstractVector{<:Integer},Nothing} = nothing,
 ) where {T,side}
     color = Vector{T}(undef, nb_vertices(bg, Val(side)))
     forbidden_colors = Vector{T}(undef, nb_vertices(bg, Val(side)))
     partial_distance2_coloring!(
-        color, forbidden_colors, bg, Val(side), vertices_in_order; forced_colors
+        color,
+        forbidden_colors,
+        bg,
+        Val(side),
+        vertices_in_order;
+        forced_colors,
     )
     return color
 end
@@ -43,7 +48,7 @@ function partial_distance2_coloring!(
     bg::BipartiteGraph,
     ::Val{side},
     vertices_in_order::AbstractVector{<:Integer};
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    forced_colors::Union{AbstractVector{<:Integer},Nothing} = nothing,
 ) where {side}
     color .= 0
     forbidden_colors .= 0
@@ -110,7 +115,7 @@ function star_coloring(
     g::AdjacencyGraph{T},
     vertices_in_order::AbstractVector{<:Integer},
     postprocessing::Bool;
-    forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
+    forced_colors::Union{AbstractVector{<:Integer},Nothing} = nothing,
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -273,7 +278,9 @@ If `postprocessing=true`, some colors might be replaced with `0` (the "neutral" 
 > [_New Acyclic and Star Coloring Algorithms with Application to Computing Hessians_](https://epubs.siam.org/doi/abs/10.1137/050639879), Gebremedhin et al. (2007), Algorithm 3.1
 """
 function acyclic_coloring(
-    g::AdjacencyGraph{T}, vertices_in_order::AbstractVector{<:Integer}, postprocessing::Bool
+    g::AdjacencyGraph{T},
+    vertices_in_order::AbstractVector{<:Integer},
+    postprocessing::Bool,
 ) where {T<:Integer}
     # Initialize data structures
     nv = nb_vertices(g)
@@ -462,7 +469,7 @@ function TreeSet(
     nr = 0
 
     # determine the number of edges for each tree and map each root to a tree index
-    for index_edge in 1:ne
+    for index_edge = 1:ne
         root = find_root!(forest, index_edge)
 
         # create a mapping between roots and tree indices
@@ -475,7 +482,7 @@ function TreeSet(
         index_tree = root_to_tree[root]
 
         # Update the number of edges for the current tree (shifted by 1 to facilitate the final cumsum)
-        tree_edge_indices[index_tree + 1] += 1
+        tree_edge_indices[index_tree+1] += 1
     end
 
     # nvmax is the number of vertices in the largest tree of the forest
@@ -502,10 +509,10 @@ function TreeSet(
         vertex_position[1] = zero(T)
         neighbor_position[1] = zero(T)
     end
-    for k in 2:nt
+    for k = 2:nt
         # Note: tree_edge_indices[k] is the number of edges in the tree k-1
-        vertex_position[k] = vertex_position[k - 1] + tree_edge_indices[k] + 1
-        neighbor_position[k] = neighbor_position[k - 1] + 2 * tree_edge_indices[k]
+        vertex_position[k] = vertex_position[k-1] + tree_edge_indices[k] + 1
+        neighbor_position[k] = neighbor_position[k-1] + 2 * tree_edge_indices[k]
     end
 
     # Record the most recent vertex from which each tree is visited
@@ -543,21 +550,21 @@ function TreeSet(
                 tree_neighbors[neighbor_index] = i
 
                 # Increment neighbor count for j in the tree (shifted by 1 to facilitate the final cumsum)
-                tree_neighbor_indices[vertex_index + 1] += 1
+                tree_neighbor_indices[vertex_index+1] += 1
             end
         end
     end
 
     # Compute a shifted cumulative sum of tree_edge_indices, starting from one
     tree_edge_indices[1] = one(T)
-    for k in 2:(nt + 1)
-        tree_edge_indices[k] += tree_edge_indices[k - 1]
+    for k = 2:(nt+1)
+        tree_edge_indices[k] += tree_edge_indices[k-1]
     end
 
     # Compute a shifted cumulative sum of tree_neighbor_indices, starting from one
     tree_neighbor_indices[1] = 1
-    for k in 2:(ne + nt + 1)
-        tree_neighbor_indices[k] += tree_neighbor_indices[k - 1]
+    for k = 2:(ne+nt+1)
+        tree_neighbor_indices[k] += tree_neighbor_indices[k-1]
     end
 
     # degrees is a vector of integers that stores the degree of each vertex in a tree
@@ -585,7 +592,7 @@ function TreeSet(
     # edges. We then look at all leaves of the corresponding graphs and repeat
     # the process until there is only one vertex left. This vertex will then be
     # a depth-minimizing root.
-    for k in 1:nt
+    for k = 1:nt
         # Initialize the queue to store the leaves
         queue_start = 1
         queue_end = 0
@@ -594,14 +601,13 @@ function TreeSet(
         # Note: tree_edge_indices contains the positions of the first and last edges,
         # so we add to add an offset k-1 between edge indices and vertex indices
         first_vertex = tree_edge_indices[k] + (k - 1)
-        last_vertex = tree_edge_indices[k + 1] + (k - 1)
+        last_vertex = tree_edge_indices[k+1] + (k - 1)
 
         # compute the degree of each vertex in the tree
-        for index_vertex in first_vertex:last_vertex
+        for index_vertex = first_vertex:last_vertex
             vertex = tree_vertices[index_vertex]
             degree =
-                tree_neighbor_indices[index_vertex + 1] -
-                tree_neighbor_indices[index_vertex]
+                tree_neighbor_indices[index_vertex+1] - tree_neighbor_indices[index_vertex]
             degrees[vertex] = degree
 
             # store a reverse mapping to get the position of the vertex in tree_vertices
@@ -615,7 +621,7 @@ function TreeSet(
         end
 
         # number of vertices in the tree
-        nv_tree = tree_edge_indices[k + 1] - tree_edge_indices[k] + 1
+        nv_tree = tree_edge_indices[k+1] - tree_edge_indices[k] + 1
 
         # Check that no more than one vertex has a degree strictly greater than one
         # "queue_end" currently represents the number of vertices considered as leaves in the tree before any pruning
@@ -634,10 +640,10 @@ function TreeSet(
 
             # Positions of the first and last neighbors of the leaf in the current tree
             first_neighbor = tree_neighbor_indices[index_leaf]
-            last_neighbor = tree_neighbor_indices[index_leaf + 1] - 1
+            last_neighbor = tree_neighbor_indices[index_leaf+1] - 1
 
             # Iterate over all neighbors of the leaf to be pruned
-            for index_neighbor in first_neighbor:last_neighbor
+            for index_neighbor = first_neighbor:last_neighbor
                 neighbor = tree_neighbors[index_neighbor]
 
                 # Check if neighbor is the parent of the leaf or if it was a child before the tree was pruned
