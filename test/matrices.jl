@@ -30,11 +30,11 @@ same_view(::Adjoint, ::Adjoint) = true
     A0_sparse = sprand(rng, 10, 20, 0.3)
     @test all(matrix_versions(A0_dense)) do A
         B = respectful_similar(A)
-        size(B) == size(A) && same_view(A, B)
+        return size(B) == size(A) && same_view(A, B)
     end
     @test all(matrix_versions(A0_sparse)) do A
         B = respectful_similar(A)
-        size(B) == size(A) && same_view(A, B)
+        return size(B) == size(A) && same_view(A, B)
     end
 end
 

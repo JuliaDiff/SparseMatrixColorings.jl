@@ -18,7 +18,7 @@ using Test
     @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Bool
     @test SparseArrays.indtype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
     @testset "Transpose" begin
-        for _ = 1:1000
+        for _ in 1:1000
             m, n = rand(100:1000), rand(100:1000)
             p = 0.05 * rand()
             A = sprand(m, n, p)
@@ -31,40 +31,31 @@ using Test
     end
     @testset "Bidirectional" begin
         @testset "symmetric_pattern = false" begin
-            for _ = 1:1000
+            for _ in 1:1000
                 m, n = rand(100:1000), rand(100:1000)
                 p = 0.05 * rand()
                 A = sprand(Bool, m, n, p)
                 A_and_Aᵀ = [spzeros(Bool, n, n) transpose(A); A spzeros(Bool, m, m)]
-                S_and_Sᵀ, edge_to_index =
-                    bidirectional_pattern(A; symmetric_pattern = false)
+                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=false)
                 @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
                 @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
                 M = SparseMatrixCSC(
-                    m + n,
-                    m + n,
-                    S_and_Sᵀ.colptr,
-                    S_and_Sᵀ.rowval,
-                    edge_to_index,
+                    m + n, m + n, S_and_Sᵀ.colptr, S_and_Sᵀ.rowval, edge_to_index
                 )
                 @test issymmetric(M)
             end
         end
         @testset "symmetric_pattern = true" begin
-            for _ = 1:1000
+            for _ in 1:1000
                 m = rand(100:1000)
                 p = 0.05 * rand()
                 A = sparse(Symmetric(sprand(Bool, m, m, p)))
                 A_and_Aᵀ = [spzeros(Bool, m, m) transpose(A); A spzeros(Bool, m, m)]
-                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern = true)
+                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=true)
                 @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
                 @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
                 M = SparseMatrixCSC(
-                    2 * m,
-                    2 * m,
-                    S_and_Sᵀ.colptr,
-                    S_and_Sᵀ.rowval,
-                    edge_to_index,
+                    2 * m, 2 * m, S_and_Sᵀ.colptr, S_and_Sᵀ.rowval, edge_to_index
                 )
                 @test issymmetric(M)
             end
@@ -85,7 +76,7 @@ using Test
         A = sprand(Bool, 100, 100, 0.1)
         S = SparsityPatternCSC(A)
         @test all(zip(axes(S, 1), axes(S, 2))) do (i, j)
-            A[i, j] == S[i, j]
+            return A[i, j] == S[i, j]
         end
     end
 end
@@ -100,9 +91,9 @@ end
         0 0 0 1 1 1 1 0
     ])
 
-    bg = BipartiteGraph(A; symmetric_pattern = false)
+    bg = BipartiteGraph(A; symmetric_pattern=false)
     @test eltype(bg) == Int
-    @test_throws DimensionMismatch BipartiteGraph(A; symmetric_pattern = true)
+    @test_throws DimensionMismatch BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 8
     # neighbors of rows
@@ -134,7 +125,7 @@ end
         1 0 1 0
         1 1 0 1
     ])
-    bg = BipartiteGraph(A; symmetric_pattern = true)
+    bg = BipartiteGraph(A; symmetric_pattern=true)
     @test nb_vertices(bg, Val(1)) == 4
     @test nb_vertices(bg, Val(2)) == 4
     # neighbors of rows and columns
@@ -176,7 +167,7 @@ end;
     @test degree(g, 7) == 6
     @test degree(g, 8) == 6
 
-    g = AdjacencyGraph(transpose(A) * A; augmented_graph = true)
+    g = AdjacencyGraph(transpose(A) * A; augmented_graph=true)
     # wrong degree
     @test degree(g, 1) == 4
     @test degree(g, 2) == 4

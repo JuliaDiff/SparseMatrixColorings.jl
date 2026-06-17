@@ -4,8 +4,8 @@ function coloring(
     A::AbstractMatrix,
     problem::ColoringProblem{structure,partition},
     algo::ADTypes.AbstractColoringAlgorithm;
-    decompression_eltype::Type{R} = Float64,
-    symmetric_pattern::Bool = false,
+    decompression_eltype::Type{R}=Float64,
+    symmetric_pattern::Bool=false,
 ) where {structure,partition,R}
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     if structure == :nonsymmetric
