@@ -21,15 +21,15 @@ function optimal_distance2_coloring(
     bg::BipartiteGraph,
     ::Val{side},
     optimizer::O;
-    silent::Bool = true,
-    assert_solved::Bool = true,
+    silent::Bool=true,
+    assert_solved::Bool=true,
 ) where {side,O}
     other_side = 3 - side
     n = nb_vertices(bg, Val(side))
     model = Model(optimizer)
     silent && set_silent(model)
     # one variable per vertex to color, removing some renumbering symmetries
-    @variable(model, 1 <= color[i=1:n] <= i, Int)
+    @variable(model, 1 <= color[i = 1:n] <= i, Int)
     # one variable to count the number of distinct colors
     @variable(model, ncolors, Int)
     @constraint(model, [ncolors; color] in MOI.CountDistinct(n + 1))
@@ -66,22 +66,14 @@ end
 function ADTypes.column_coloring(A::AbstractMatrix, algo::OptimalColoringAlgorithm)
     bg = BipartiteGraph(A)
     return optimal_distance2_coloring(
-        bg,
-        Val(2),
-        algo.optimizer;
-        algo.silent,
-        algo.assert_solved,
+        bg, Val(2), algo.optimizer; algo.silent, algo.assert_solved
     )
 end
 
 function ADTypes.row_coloring(A::AbstractMatrix, algo::OptimalColoringAlgorithm)
     bg = BipartiteGraph(A)
     return optimal_distance2_coloring(
-        bg,
-        Val(1),
-        algo.optimizer;
-        algo.silent,
-        algo.assert_solved,
+        bg, Val(1), algo.optimizer; algo.silent, algo.assert_solved
     )
 end
 

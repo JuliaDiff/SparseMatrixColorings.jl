@@ -37,13 +37,13 @@ const DEFAULT_PAD = 0
 
 function SparseMatrixColorings.show_colors(
     res::AbstractColoringResult;
-    colorscheme = nothing,
-    background_color::Colorant = DEFAULT_BACKGROUND_COLOR, # color used for zero matrix entries and pad
-    border_color::Colorant = DEFAULT_BORDER_COLOR, # color used for zero matrix entries and pad
-    scale::Int = DEFAULT_SCALE, # scale size of matrix entries to `scale × scale` pixels
-    border::Int = DEFAULT_BORDER,  # border around matrix entries
-    pad::Int = DEFAULT_PAD, # pad between matrix entries
-    warn::Bool = true,
+    colorscheme=nothing,
+    background_color::Colorant=DEFAULT_BACKGROUND_COLOR, # color used for zero matrix entries and pad
+    border_color::Colorant=DEFAULT_BORDER_COLOR, # color used for zero matrix entries and pad
+    scale::Int=DEFAULT_SCALE, # scale size of matrix entries to `scale × scale` pixels
+    border::Int=DEFAULT_BORDER,  # border around matrix entries
+    pad::Int=DEFAULT_PAD, # pad between matrix entries
+    warn::Bool=true,
 )
     scale < 1 && throw(ArgumentError("`scale` has to be ≥ 1."))
     border < 0 && throw(ArgumentError("`border` has to be ≥ 0."))
@@ -53,14 +53,15 @@ function SparseMatrixColorings.show_colors(
         if warn && ncolors(res) > length(colorscheme)
             @warn "`show_colors` will reuse colors since the provided `colorscheme` has $(length(colorscheme)) colors and the matrix needs $(ncolors(res)). You can turn off this warning via the keyword argument `warn = false`, or choose a larger `colorscheme` from ColorSchemes.jl."
         end
-        colorscheme, background_color, border_color =
-            promote_colors(colorscheme, background_color, border_color)
+        colorscheme, background_color, border_color = promote_colors(
+            colorscheme, background_color, border_color
+        )
     else
         # Sample n distinguishable colors, excluding the background and border color
         colorscheme = distinguishable_colors(
             ncolors(res),
             [convert(RGB, background_color), convert(RGB, border_color)];
-            dropseed = true,
+            dropseed=true,
         )
     end
     outs = allocate_outputs(res, background_color, border_color, scale, border, pad)
@@ -85,7 +86,7 @@ function matrix_entry_area(I::CartesianIndex, scale, border, pad)
 end
 
 function matrix_entry_plus_border_area(I::CartesianIndex, scale, border, pad)
-    stencil = CartesianIndices((1:(scale+2border), 1:(scale+2border)))
+    stencil = CartesianIndices((1:(scale + 2border), 1:(scale + 2border)))
     return CartesianIndex(1, 1) * pad +
            (I - CartesianIndex(1, 1)) * (scale + 2border + pad) .+ stencil
 end
@@ -270,8 +271,9 @@ function show_colors!(
     A_ccolor_indices = mod1.(column_colors(res), length(colorscheme))
     A_rcolor_indices = mod1.(row_shift .+ row_colors(res), length(colorscheme))
     B_ccolor_indices = mod1.(1:maximum(column_colors(res)), length(colorscheme))
-    B_rcolor_indices =
-        mod1.((row_shift+1):(row_shift+maximum(row_colors(res))), length(colorscheme))
+    B_rcolor_indices = mod1.(
+        (row_shift + 1):(row_shift + maximum(row_colors(res))), length(colorscheme)
+    )
     A_ccolors = colorscheme[A_ccolor_indices]
     A_rcolors = colorscheme[A_rcolor_indices]
     B_ccolors = colorscheme[B_ccolor_indices]

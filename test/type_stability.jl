@@ -25,9 +25,7 @@ rng = StableRNG(63)
     end
 
     @testset "$structure - $partition - $decompression" for (
-        structure,
-        partition,
-        decompression,
+        structure, partition, decompression
     ) in [
         (:nonsymmetric, :column, :direct),
         (:nonsymmetric, :row, :direct),
@@ -90,9 +88,7 @@ end;
     A0 = sparse(Symmetric(sprand(rng, n, n, 5 / n)))
 
     @testset "$structure - $partition - $decompression" for (
-        structure,
-        partition,
-        decompression,
+        structure, partition, decompression
     ) in [
         (:nonsymmetric, :column, :direct),
         (:nonsymmetric, :row, :direct),
@@ -106,7 +102,7 @@ end;
                 A0,
                 ColoringProblem(; structure, partition),
                 GreedyColoringAlgorithm(; decompression);
-                decompression_eltype = eltype(A),
+                decompression_eltype=eltype(A),
             )
             if partition == :bidirectional
                 Br, Bc = compress(A, result)
@@ -136,10 +132,7 @@ end;
                             B[1, :]
                         end
                         @test_opt decompress_single_color!(
-                            respectful_similar(A),
-                            b,
-                            1,
-                            result,
+                            respectful_similar(A), b, 1, result
                         )
                     end
                 end
@@ -151,11 +144,7 @@ end;
                 @testset "Single-color triangle decompression" begin
                     if structure == :symmetric && decompression == :direct
                         @test_opt decompress_single_color!(
-                            respectful_similar(triu(A)),
-                            B[:, 1],
-                            1,
-                            result,
-                            :U,
+                            respectful_similar(triu(A)), B[:, 1], 1, result, :U
                         )
                     end
                 end
@@ -192,9 +181,7 @@ end;
         sparse(Symmetric(sprand(rng, Float32, 100, 100, 0.1))),
     )
     @testset "$structure - $partition - $decompression" for (
-        structure,
-        partition,
-        decompression,
+        structure, partition, decompression
     ) in [
         (:nonsymmetric, :column, :direct),
         (:nonsymmetric, :row, :direct),

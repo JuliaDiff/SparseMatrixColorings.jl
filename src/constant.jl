@@ -75,20 +75,17 @@ struct ConstantColoringAlgorithm{partition,structure,M<:AbstractMatrix,T<:Intege
     color::Vector{T}
 
     function ConstantColoringAlgorithm{partition,structure}(
-        matrix_template::AbstractMatrix,
-        color::Vector{<:Integer},
+        matrix_template::AbstractMatrix, color::Vector{<:Integer}
     ) where {partition,structure}
         check_valid_problem(structure, partition)
         return new{partition,structure,typeof(matrix_template),eltype(color)}(
-            matrix_template,
-            color,
+            matrix_template, color
         )
     end
 end
 
 function ConstantColoringAlgorithm{partition}(
-    matrix_template::AbstractMatrix,
-    color::Vector{<:Integer},
+    matrix_template::AbstractMatrix, color::Vector{<:Integer}
 ) where {partition}
     return ConstantColoringAlgorithm{partition,:nonsymmetric}(matrix_template, color)
 end
@@ -96,8 +93,8 @@ end
 function ConstantColoringAlgorithm(
     matrix_template::AbstractMatrix,
     color::Vector{<:Integer};
-    structure::Symbol = :nonsymmetric,
-    partition::Symbol = :column,
+    structure::Symbol=:nonsymmetric,
+    partition::Symbol=:column,
 )
     return ConstantColoringAlgorithm{partition,structure}(matrix_template, color)
 end
@@ -114,24 +111,21 @@ function check_template(algo::ConstantColoringAlgorithm, A::AbstractMatrix)
 end
 
 function ADTypes.column_coloring(
-    A::AbstractMatrix,
-    algo::ConstantColoringAlgorithm{:column,:nonsymmetric},
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column,:nonsymmetric}
 )
     check_template(algo, A)
     return algo.color
 end
 
 function ADTypes.row_coloring(
-    A::AbstractMatrix,
-    algo::ConstantColoringAlgorithm{:row,:nonsymmetric},
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:row,:nonsymmetric}
 )
     check_template(algo, A)
     return algo.color
 end
 
 function ADTypes.symmetric_coloring(
-    A::AbstractMatrix,
-    algo::ConstantColoringAlgorithm{:column,:symmetric},
+    A::AbstractMatrix, algo::ConstantColoringAlgorithm{:column,:symmetric}
 )
     check_template(algo, A)
     return algo.color

@@ -1,7 +1,5 @@
 function proper_length_coloring(
-    A::AbstractMatrix,
-    color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
     m, n = size(A)
     if length(color) != n
@@ -17,7 +15,7 @@ function proper_length_bicoloring(
     A::AbstractMatrix,
     row_color::AbstractVector{<:Integer},
     column_color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    verbose::Bool=false,
 )
     m, n = size(A)
     bool = true
@@ -54,9 +52,7 @@ A partition of the columns of a matrix `A` is _structurally orthogonal_ if, for 
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function structurally_orthogonal_columns(
-    A::AbstractMatrix,
-    color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
     if !proper_length_coloring(A, color; verbose)
         return false
@@ -64,7 +60,7 @@ function structurally_orthogonal_columns(
     group = group_by_color(color)
     for (c, g) in enumerate(group)
         Ag = view(A, :, g)
-        nonzeros_per_row = only(eachcol(count(!iszero, Ag; dims = 2)))
+        nonzeros_per_row = only(eachcol(count(!iszero, Ag; dims=2)))
         max_nonzeros_per_row, i = findmax(nonzeros_per_row)
         if max_nonzeros_per_row > 1
             if verbose
@@ -102,9 +98,7 @@ It is equivalent to a __star coloring__.
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function symmetrically_orthogonal_columns(
-    A::AbstractMatrix,
-    color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
     checksquare(A)
     if !proper_length_coloring(A, color; verbose)
@@ -116,14 +110,7 @@ function symmetrically_orthogonal_columns(
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
         check = _bilateral_check(
-            A;
-            i,
-            j,
-            ci,
-            cj,
-            row_group = group,
-            column_group = group,
-            verbose,
+            A; i, j, ci, cj, row_group=group, column_group=group, verbose
         )
         !check && return false
     end
@@ -152,7 +139,7 @@ function structurally_biorthogonal(
     A::AbstractMatrix,
     row_color::AbstractVector{<:Integer},
     column_color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    verbose::Bool=false,
 )
     if !proper_length_bicoloring(A, row_color, column_color; verbose)
         return false
@@ -255,9 +242,7 @@ Return `true` if coloring the columns of the symmetric matrix `A` with the vecto
 > [_What Color Is Your Jacobian? Graph Coloring for Computing Derivatives_](https://epubs.siam.org/doi/10.1137/S0036144504444711), Gebremedhin et al. (2005)
 """
 function directly_recoverable_columns(
-    A::AbstractMatrix,
-    color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    A::AbstractMatrix, color::AbstractVector{<:Integer}; verbose::Bool=false
 )
     if !proper_length_coloring(A, color; verbose)
         return false
@@ -266,8 +251,8 @@ function directly_recoverable_columns(
     B = if isempty(group)
         similar(A, size(A, 1), 0)
     else
-        stack(group; dims = 2) do g
-            dropdims(sum(A[:, g]; dims = 2); dims = 2)
+        stack(group; dims=2) do g
+            return dropdims(sum(A[:, g]; dims=2); dims=2)
         end
     end
     A_unique = Set(unique(A))
@@ -311,7 +296,7 @@ function substitutable_columns(
     A::AbstractMatrix,
     rank_nonzeros::AbstractMatrix,
     color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    verbose::Bool=false,
 )
     checksquare(A)
     if !proper_length_coloring(A, color; verbose)
@@ -323,15 +308,7 @@ function substitutable_columns(
         iszero(A[i, j]) && continue
         ci, cj = color[i], color[j]
         check = _substitutable_check(
-            A,
-            rank_nonzeros;
-            i,
-            j,
-            ci,
-            cj,
-            row_group = group,
-            column_group = group,
-            verbose,
+            A, rank_nonzeros; i, j, ci, cj, row_group=group, column_group=group, verbose
         )
         !check && return false
     end
@@ -362,7 +339,7 @@ function substitutable_bidirectional(
     rank_nonzeros::AbstractMatrix,
     row_color::AbstractVector{<:Integer},
     column_color::AbstractVector{<:Integer};
-    verbose::Bool = false,
+    verbose::Bool=false,
 )
     if !proper_length_bicoloring(A, row_color, column_color; verbose)
         return false
@@ -373,15 +350,7 @@ function substitutable_bidirectional(
         iszero(A[i, j]) && continue
         ci, cj = row_color[i], column_color[j]
         check = _substitutable_check(
-            A,
-            rank_nonzeros;
-            i,
-            j,
-            ci,
-            cj,
-            row_group,
-            column_group,
-            verbose,
+            A, rank_nonzeros; i, j, ci, cj, row_group, column_group, verbose
         )
         !check && return false
     end
@@ -487,7 +456,7 @@ function valid_dynamic_order(
     for i in eachindex(π)
         vi = π[i]
         yet_to_be_ordered = direction == :low2high ? π[i:end] : π[begin:i]
-        considered_for_degree = degtype == :back ? π[begin:(i-1)] : π[(i+1):end]
+        considered_for_degree = degtype == :back ? π[begin:(i - 1)] : π[(i + 1):end]
         di = degree_in_subset(g, vi, considered_for_degree)
         considered_for_degree_switched = copy(considered_for_degree)
         for vj in yet_to_be_ordered
@@ -515,7 +484,7 @@ function valid_dynamic_order(
     for i in eachindex(π)
         vi = π[i]
         yet_to_be_ordered = direction == :low2high ? π[i:end] : π[begin:i]
-        considered_for_degree = degtype == :back ? π[begin:(i-1)] : π[(i+1):end]
+        considered_for_degree = degtype == :back ? π[begin:(i - 1)] : π[(i + 1):end]
         di = degree_dist2_in_subset(g, Val(side), vi, considered_for_degree)
         considered_for_degree_switched = copy(considered_for_degree)
         for vj in yet_to_be_ordered
@@ -561,10 +530,10 @@ function rank_nonzeros_from_trees(result::TreeSetColoringResult)
         counter += 1
         rank_nonzeros[i, i] = counter
     end
-    for k = 1:nt
+    for k in 1:nt
         first = tree_edge_indices[k]
-        last = tree_edge_indices[k+1] - 1
-        for pos = first:last
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
             (i, j) = reverse_bfs_orders[pos]
             counter += 1
             rank_nonzeros[i, j] = counter
@@ -583,21 +552,21 @@ function rank_nonzeros_from_trees(result::BicoloringResult)
     m, n = size(A)
     nnzA = nnz(S) ÷ 2
     nzval = zeros(Int, nnzA)
-    colptr = large_colptr[1:(n+1)]
+    colptr = large_colptr[1:(n + 1)]
     rowval = large_rowval[1:nnzA]
     rowval .-= n
     rank_nonzeros = SparseMatrixCSC(m, n, colptr, rowval, nzval)
     counter = 0
-    for k = 1:nt
+    for k in 1:nt
         first = tree_edge_indices[k]
-        last = tree_edge_indices[k+1] - 1
-        for pos = first:last
+        last = tree_edge_indices[k + 1] - 1
+        for pos in first:last
             (i, j) = reverse_bfs_orders[pos]
             counter += 1
             if i > j
-                rank_nonzeros[i-n, j] = counter
+                rank_nonzeros[i - n, j] = counter
             else
-                rank_nonzeros[j-n, i] = counter
+                rank_nonzeros[j - n, i] = counter
             end
         end
     end

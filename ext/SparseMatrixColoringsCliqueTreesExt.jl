@@ -15,7 +15,7 @@ function vertices(g::AdjacencyGraph{T}, order::PerfectEliminationOrder) where {T
 
     # construct a perfect elimination order
     # self-loops are ignored
-    order, _ = permutation(M; alg = order.elimination_algorithm)
+    order, _ = permutation(M; alg=order.elimination_algorithm)
 
     return reverse!(order)
 end

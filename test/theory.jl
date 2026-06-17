@@ -10,14 +10,14 @@ Per the recovery paper "Efficient computation of sparse Hessians using Coloring 
 - star coloring uses 2⌊ρ/2⌋+1 colors
 =#
 
-problem = ColoringProblem(; structure = :symmetric, partition = :column)
+problem = ColoringProblem(; structure=:symmetric, partition=:column)
 
 function banded_matrix(n::Integer, ρ::Integer)
-    return spdiagm([k => ones(Bool, n - abs(k)) for k = (-(ρ÷2)):(ρ÷2)]...)
+    return spdiagm([k => ones(Bool, n - abs(k)) for k in (-(ρ ÷ 2)):(ρ ÷ 2)]...)
 end
 
 @testset "Star coloring" begin
-    algo = GreedyColoringAlgorithm(; decompression = :direct)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     for n in [5, 10, 20] .* 1000
         S = banded_matrix(n, 10)
         direct_result = coloring(S, problem, algo)
@@ -30,7 +30,7 @@ end
 end
 
 @testset "Acyclic coloring" begin
-    algo = GreedyColoringAlgorithm(; decompression = :substitution)
+    algo = GreedyColoringAlgorithm(; decompression=:substitution)
     for n in [5, 10, 20] .* 1000
         S = banded_matrix(n, 10)
         substitution_result = coloring(S, problem, algo)

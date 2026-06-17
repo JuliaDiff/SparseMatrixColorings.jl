@@ -20,8 +20,8 @@ symmetric_params = vcat(
 )
 
 @testset "Column coloring & decompression" begin
-    problem = ColoringProblem(; structure = :nonsymmetric, partition = :column)
-    algo = GreedyColoringAlgorithm(; decompression = :direct)
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = column_coloring(A0, algo)
@@ -35,8 +35,8 @@ symmetric_params = vcat(
 end;
 
 @testset "Row coloring & decompression" begin
-    problem = ColoringProblem(; structure = :nonsymmetric, partition = :row)
-    algo = GreedyColoringAlgorithm(; decompression = :direct)
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:row)
+    algo = GreedyColoringAlgorithm(; decompression=:direct)
     @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
         A0 = sprand(rng, m, n, p)
         color0 = row_coloring(A0, algo)
@@ -50,10 +50,10 @@ end;
 end;
 
 @testset "Symmetric coloring & direct decompression" begin
-    problem = ColoringProblem(; structure = :symmetric, partition = :column)
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
     @testset for algo in (
-        GreedyColoringAlgorithm(; postprocessing = false, decompression = :direct),
-        GreedyColoringAlgorithm(; postprocessing = true, decompression = :direct),
+        GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct),
+        GreedyColoringAlgorithm(; postprocessing=true, decompression=:direct),
     )
         @testset "$((; n, p))" for (n, p) in symmetric_params
             A0 = sparse(Symmetric(sprand(rng, n, n, p)))
@@ -64,10 +64,10 @@ end;
 end;
 
 @testset "Symmetric coloring & substitution decompression" begin
-    problem = ColoringProblem(; structure = :symmetric, partition = :column)
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
     @testset for algo in (
-        GreedyColoringAlgorithm(; postprocessing = false, decompression = :substitution),
-        GreedyColoringAlgorithm(; postprocessing = true, decompression = :substitution),
+        GreedyColoringAlgorithm(; postprocessing=false, decompression=:substitution),
+        GreedyColoringAlgorithm(; postprocessing=true, decompression=:substitution),
     )
         @testset "$((; n, p))" for (n, p) in symmetric_params
             A0 = sparse(Symmetric(sprand(rng, n, n, p)))
@@ -78,17 +78,13 @@ end;
 end;
 
 @testset "Bicoloring & direct decompression" begin
-    problem = ColoringProblem(; structure = :nonsymmetric, partition = :bidirectional)
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     @testset for algo in (
         GreedyColoringAlgorithm(
-            RandomOrder(StableRNG(0), 0);
-            postprocessing = false,
-            decompression = :direct,
+            RandomOrder(StableRNG(0), 0); postprocessing=false, decompression=:direct
         ),
         GreedyColoringAlgorithm(
-            RandomOrder(StableRNG(0), 0);
-            postprocessing = true,
-            decompression = :direct,
+            RandomOrder(StableRNG(0), 0); postprocessing=true, decompression=:direct
         ),
     )
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
@@ -103,17 +99,13 @@ end;
 end;
 
 @testset "Bicoloring & substitution decompression" begin
-    problem = ColoringProblem(; structure = :nonsymmetric, partition = :bidirectional)
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     @testset for algo in (
         GreedyColoringAlgorithm(
-            RandomOrder(StableRNG(0), 0);
-            postprocessing = false,
-            decompression = :substitution,
+            RandomOrder(StableRNG(0), 0); postprocessing=false, decompression=:substitution
         ),
         GreedyColoringAlgorithm(
-            RandomOrder(StableRNG(0), 0);
-            postprocessing = true,
-            decompression = :substitution,
+            RandomOrder(StableRNG(0), 0); postprocessing=true, decompression=:substitution
         ),
     )
         @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
