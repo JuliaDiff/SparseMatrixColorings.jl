@@ -37,8 +37,15 @@ Some parts of the articles (like definitions) are thus copied verbatim in the do
 
 ## Alternatives
 
-- [ColPack.jl](https://github.com/michel2323/ColPack.jl): a Julia interface to the C++ library [ColPack](https://github.com/CSCsw/ColPack)
-- [SparseDiffTools.jl](https://github.com/JuliaDiff/SparseDiffTools.jl): contains Julia implementations of some coloring algorithms
+In Python:
+
+- [pysparsematrixcolorings](https://github.com/gdalle/pysparsematrixcolorings): an experimental Python interface to the present package
+- [asdex](https://github.com/adrhill/asdex): a Python-native sparse differentiation library, with coloring utilities
+
+In Julia (unmaintained):
+
+- [ColPack.jl](https://github.com/exanauts/ColPack.jl): a Julia interface to the C++ library [ColPack](https://github.com/CSCsw/ColPack)
+- [SparseDiffTools.jl](https://github.com/JuliaDiff/SparseDiffTools.jl): contains older Julia implementations of some coloring algorithms
 
 ## Citing
 
