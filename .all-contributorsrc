@@ -1,4 +1,27 @@
 {
   "projectName": "SparseMatrixColorings.jl",
-  "projectOwner": "JuliaDiff"
+  "projectOwner": "JuliaDiff",
+  "files": [
+    "README.md"
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "amontoison",
+      "name": "Alexis Montoison",
+      "avatar_url": "https://avatars.githubusercontent.com/u/35051714?v=4",
+      "profile": "https://github.com/amontoison",
+      "contributions": [
+        "ideas",
+        "code",
+        "doc",
+        "maintenance",
+        "research",
+        "review",
+        "talk"
+      ]
+    }
+  ]
 }
