@@ -22,6 +22,21 @@
         "review",
         "talk"
       ]
+    },
+    {
+      "login": "gdalle",
+      "name": "Guillaume Dalle",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22795598?v=4",
+      "profile": "https://gdalle.github.io/",
+      "contributions": [
+        "ideas",
+        "code",
+        "doc",
+        "maintenance",
+        "research",
+        "review",
+        "talk"
+      ]
     }
   ]
 }
