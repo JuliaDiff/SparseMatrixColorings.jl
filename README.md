@@ -71,6 +71,13 @@ The link <https://zenodo.org/doi/10.5281/zenodo.11314275> resolves to the latest
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/amontoison"><img src="https://avatars.githubusercontent.com/u/35051714?v=4?s=100" width="100px;" alt="Alexis Montoison"/><br /><sub><b>Alexis Montoison</b></sub></a><br /><a href="#ideas-amontoison" title="Ideas, Planning, & Feedback">🤔</a> <a href="#code-amontoison" title="Code">💻</a> <a href="#doc-amontoison" title="Documentation">📖</a> <a href="#maintenance-amontoison" title="Maintenance">🚧</a> <a href="#research-amontoison" title="Research">🔬</a> <a href="#review-amontoison" title="Reviewed Pull Requests">👀</a> <a href="#talk-amontoison" title="Talks">📢</a></td>
+    </tr>
+  </tbody>
+</table>
 
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
