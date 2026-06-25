@@ -9,6 +9,7 @@
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/JuliaDiff/BlueStyle)
 [![arXiv](https://img.shields.io/badge/arXiv-2505.07308-b31b1b.svg)](https://arxiv.org/abs/2505.07308)
 [![DOI](https://zenodo.org/badge/801999408.svg)](https://zenodo.org/doi/10.5281/zenodo.11314275)
+| Community | [![All Contributors](https://img.shields.io/github/all-contributors/JuliaDiff/SparseMatrixColorings.jl?color=ee8449&style=flat-square)](#contributors) |
 
 Coloring algorithms for sparse Jacobian and Hessian matrices.
 
@@ -64,3 +65,14 @@ Please cite this software using the provided `CITATION.cff` file or the `.bib` e
 ```
 
 The link <https://zenodo.org/doi/10.5281/zenodo.11314275> resolves to the latest version on Zenodo.
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
