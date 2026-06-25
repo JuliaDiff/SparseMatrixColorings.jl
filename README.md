@@ -64,3 +64,14 @@ Please cite this software using the provided `CITATION.cff` file or the `.bib` e
 ```
 
 The link <https://zenodo.org/doi/10.5281/zenodo.11314275> resolves to the latest version on Zenodo.
+
+## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
