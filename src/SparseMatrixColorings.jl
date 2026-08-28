@@ -14,11 +14,13 @@ using Base.Iterators: Iterators
 using DocStringExtensions: README, EXPORTS, SIGNATURES, TYPEDEF, TYPEDFIELDS
 using LinearAlgebra:
     Adjoint,
+    Bidiagonal,
     Diagonal,
     Hermitian,
     LowerTriangular,
     Symmetric,
     Transpose,
+    Tridiagonal,
     UpperTriangular,
     adjoint,
     checksquare,
@@ -54,6 +56,7 @@ include("interface.jl")
 include("constant.jl")
 include("adtypes.jl")
 include("decompression.jl")
+include("structured.jl")
 include("check.jl")
 include("examples.jl")
 include("show_colors.jl")
@@ -65,7 +68,7 @@ export NaturalOrder, RandomOrder, LargestFirst
 export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFirst
 export PerfectEliminationOrder
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
-export ConstantColoringAlgorithm
+export ConstantColoringAlgorithm, StructuredColoringAlgorithm
 export OptimalColoringAlgorithm
 export coloring, fast_coloring
 export column_colors, row_colors, ncolors

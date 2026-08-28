@@ -17,8 +17,8 @@ Copied from `SparseMatrixCSC`:
 struct SparsityPatternCSC{Ti<:Integer} <: AbstractMatrix{Bool}
     m::Int
     n::Int
-    colptr::Vector{Ti}
-    rowval::Vector{Ti}
+    colptr::AbstractVector{Ti}
+    rowval::AbstractVector{Ti}
 end
 
 SparsityPatternCSC(A::SparseMatrixCSC) = SparsityPatternCSC(A.m, A.n, A.colptr, A.rowval)

@@ -25,6 +25,7 @@ ColoringProblem
 GreedyColoringAlgorithm
 ConstantColoringAlgorithm
 OptimalColoringAlgorithm
+StructuredColoringAlgorithm
 ```
 
 ## Result analysis
