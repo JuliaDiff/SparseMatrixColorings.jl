@@ -1,8 +1,5 @@
-# Guard for static compilation (`juliac --trim=safe`).
-#
-# The C and Fortran interfaces compile SMC.jl into a standalone shared library.
-# The trimming verifier rejects any call whose result type is not fully inferred,
-# so `coloring` must return a concrete type.
+# Guard for static compilation: `juliac --trim=safe` rejects any call whose
+# result type is not fully inferred.
 
 using SparseArrays
 using SparseMatrixColorings
