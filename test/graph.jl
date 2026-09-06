@@ -15,7 +15,8 @@ using Test
 ## SparsityPatternCSC
 
 @testset "SparsityPatternCSC" begin
-    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
+    @test eltype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Bool
+    @test SparseArrays.indtype(SparsityPatternCSC(sprand(10, 10, 0.1))) == Int
     @testset "Transpose" begin
         for _ in 1:1000
             m, n = rand(100:1000), rand(100:1000)
@@ -68,14 +69,16 @@ using Test
         @test size(A, 1) == size(S, 1)
         @test size(A, 2) == size(S, 2)
         @test size(A, 3) == size(S, 3)
+        @test axes(A) == axes(S)
         @test axes(A, 1) == axes(S, 1)
         @test axes(A, 2) == axes(S, 2)
+        @test axes(A, 3) == axes(S, 3)
     end
     @testset "getindex" begin
         A = sprand(Bool, 100, 100, 0.1)
         S = SparsityPatternCSC(A)
         @test all(zip(axes(S, 1), axes(S, 2))) do (i, j)
-            A[i, j] == S[i, j]
+            return A[i, j] == S[i, j]
         end
     end
 end
@@ -166,7 +169,7 @@ end;
     @test degree(g, 7) == 6
     @test degree(g, 8) == 6
 
-    g = AdjacencyGraph(transpose(A) * A; has_diagonal=false)
+    g = AdjacencyGraph(transpose(A) * A; augmented_graph=true)
     # wrong degree
     @test degree(g, 1) == 4
     @test degree(g, 2) == 4

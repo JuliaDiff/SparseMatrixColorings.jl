@@ -1,7 +1,6 @@
 using Aqua
 using Documenter
 using JET
-using JuliaFormatter
 using SparseMatrixColorings
 using Test
 
@@ -11,7 +10,7 @@ using Colors: Colors
 @testset verbose = true "SparseMatrixColorings" begin
     if get(ENV, "JULIA_SMC_TEST_GROUP", nothing) == "GPU"
         @testset "CUDA" begin
-            using CUDA
+            using CUDA, cuSPARSE
             if CUDA.functional()
                 include("cuda.jl")
             end
@@ -26,17 +25,13 @@ using Colors: Colors
         include("utils.jl")
         @testset verbose = true "Code quality" begin
             @testset "Aqua" begin
-                Aqua.test_all(SparseMatrixColorings; stale_deps=(; ignore=[:Requires],))
+                Aqua.test_all(SparseMatrixColorings; undocumented_names=true)
             end
             @testset "JET" begin
-                JET.test_package(SparseMatrixColorings; target_defined_modules=true)
+                JET.test_package(
+                    SparseMatrixColorings; target_modules=(SparseMatrixColorings,)
+                )
             end
-            # @testset "JuliaFormatter" begin
-                # TODO: switch to Runic (temporarily deactivated)
-                # @test JuliaFormatter.format(
-                #     SparseMatrixColorings; verbose=false, overwrite=false
-                # )
-            # end
             @testset "Doctests" begin
                 Documenter.doctest(SparseMatrixColorings)
             end
@@ -95,7 +90,10 @@ using Colors: Colors
         end
         @testset verbose = true "Performance" begin
             @testset "Type stability" begin
-                include("type_stability.jl")
+                if VERSION < v"1.12"
+                    # TODO: fix JET misbehaving
+                    include("type_stability.jl")
+                end
             end
             @testset "Allocations" begin
                 include("allocations.jl")

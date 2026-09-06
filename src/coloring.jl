@@ -124,7 +124,7 @@ function star_coloring(
 
     for v in vertices_in_order
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             color_w = color[w]
             iszero(color_w) && continue
             forbidden_colors[color_w] = v
@@ -139,7 +139,7 @@ function star_coloring(
             else
                 first_neighbor[color[w]] = (v, w, index_vw)
                 for (x, index_wx) in neighbors_with_edge_indices(g, w)
-                    !has_diagonal(g) || (w == x && continue)
+                    augmented_graph(g) || (w == x && continue)
                     color_x = color[x]
                     (x == v || iszero(color_x)) && continue
                     if x == hub[star[index_wx]]  # potential Case 2 (which is always false for trivial stars with two vertices, since the associated hub is negative)
@@ -184,7 +184,7 @@ function _treat!(
     color::AbstractVector{<:Integer},
 )
     for x in neighbors(g, w)
-        !has_diagonal(g) || (w == x && continue)
+        augmented_graph(g) || (w == x && continue)
         color_x = color[x]
         iszero(color_x) && continue
         forbidden_colors[color_x] = v
@@ -204,12 +204,12 @@ function _update_stars!(
     first_neighbor::AbstractVector{<:Tuple},
 )
     for (w, index_vw) in neighbors_with_edge_indices(g, v)
-        !has_diagonal(g) || (v == w && continue)
+        augmented_graph(g) || (v == w && continue)
         color_w = color[w]
         iszero(color_w) && continue
         x_exists = false
         for (x, index_wx) in neighbors_with_edge_indices(g, w)
-            !has_diagonal(g) || (w == x && continue)
+            augmented_graph(g) || (w == x && continue)
             if x != v && color[x] == color[v]  # vw, wx ∈ E
                 star_wx = star[index_wx]
                 hub[star_wx] = w  # this may already be true
@@ -286,23 +286,22 @@ function acyclic_coloring(
 
     for v in vertices_in_order
         for w in neighbors(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             color_w = color[w]
             iszero(color_w) && continue
             forbidden_colors[color_w] = v
         end
         for w in neighbors(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             iszero(color[w]) && continue
             for (x, index_wx) in neighbors_with_edge_indices(g, w)
-                !has_diagonal(g) || (w == x && continue)
+                augmented_graph(g) || (w == x && continue)
                 color_x = color[x]
                 iszero(color_x) && continue
                 if forbidden_colors[color_x] != v
                     _prevent_cycle!(
                         v,
                         w,
-                        x,
                         index_wx,
                         color_x,
                         first_visit_to_tree,
@@ -320,20 +319,20 @@ function acyclic_coloring(
             end
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)  # grow two-colored stars around the vertex v
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             color_w = color[w]
             iszero(color_w) && continue
             _grow_star!(v, w, index_vw, color_w, first_neighbor, forest)
         end
         for (w, index_vw) in neighbors_with_edge_indices(g, v)
-            !has_diagonal(g) || (v == w && continue)
+            augmented_graph(g) || (v == w && continue)
             iszero(color[w]) && continue
             for (x, index_wx) in neighbors_with_edge_indices(g, w)
-                !has_diagonal(g) || (w == x && continue)
+                augmented_graph(g) || (w == x && continue)
                 color_x = color[x]
                 (x == v || iszero(color_x)) && continue
                 if color_x == color[v]
-                    _merge_trees!(v, w, x, index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
+                    _merge_trees!(index_vw, index_wx, forest)  # merge trees T₁ ∋ vw and T₂ ∋ wx if T₁ != T₂
                 end
             end
         end
@@ -354,7 +353,6 @@ function _prevent_cycle!(
     # not modified
     v::Integer,
     w::Integer,
-    x::Integer,
     index_wx::Integer,
     color_x::Integer,
     # modified
@@ -396,9 +394,6 @@ end
 
 function _merge_trees!(
     # not modified
-    v::Integer,
-    w::Integer,
-    x::Integer,
     index_vw::Integer,
     index_wx::Integer,
     # modified
@@ -422,9 +417,23 @@ Encode a set of 2-colored trees resulting from the [`acyclic_coloring`](@ref) al
 $TYPEDFIELDS
 """
 struct TreeSet{T}
+    """
+    For a tree index `1 <= k <= nt`, the list
+    `list = reverse_bfs_order[tree_edge_indices[k]:(tree_edge_indices[k+1]-1)]` is a list of edges
+    `list[i] = (leaf, inner)` of the `k`th tree such that `leaf` is a leaf of the tree containing
+    the edges `list[i:end]`.
+    From an other point of view, `reverse(list)` contains the edges in the order of a breadth first
+    (BFS) traversal order of the `k`th tree starting from a depth-minimizing root.
+    """
     reverse_bfs_orders::Vector{Tuple{T,T}}
+    "For a tree index `1 <= k <= nt`, `is_star[k]` indicates whether the `k`th three is a star."
     is_star::Vector{Bool}
+    """
+    `tree_edge_indices[1]` is one and `tree_edge_indices[k+1] - tree_edge_indices[k]` is the number of edges in the `k`th tree.
+    One can think of it as a kind of fused vector of offsets (similar to the `colptr` field of `SparseMatrixCSC`) of all trees together.
+    """
     tree_edge_indices::Vector{T}
+    "numbers of 2-colored trees for which trees sharing the same 2 colors have disjoint edges"
     nt::T
 end
 
@@ -432,6 +441,7 @@ function TreeSet(
     g::AdjacencyGraph{T},
     forest::Forest{T},
     buffer::AbstractVector{T},
+    # The value of `reverse_bfs_orders` is ignored, we just provide the storage for it (or reuse memory allocated during acyclic coloring)
     reverse_bfs_orders::Vector{Tuple{T,T}},
     ne::Integer,
 ) where {T}
@@ -566,7 +576,15 @@ function TreeSet(
     # Number of edges treated
     num_edges_treated = zero(T)
 
-    # reverse_bfs_orders contains the reverse breadth first (BFS) traversal order for each tree in the forest
+    # The `rank` of the `k`th tree encoded in `forest` does not correspond
+    # to the depth of the tree rooted as the root encoded in `forest` because
+    # `forest.parents[u] = v` only needs a path to exists from `u` to `v` but
+    # there may not be an edge `(u, v)`.
+    # We also want a root `r` that minimizes the depth of the tree rooted at
+    # `r`. To achieve this, we start from each leaf and remove the corresponding
+    # edges. We then look at all leaves of the corresponding graphs and repeat
+    # the process until there is only one vertex left. This vertex will then be
+    # a depth-minimizing root.
     for k in 1:nt
         # Initialize the queue to store the leaves
         queue_start = 1
@@ -642,151 +660,4 @@ function TreeSet(
     end
 
     return TreeSet(reverse_bfs_orders, is_star, tree_edge_indices, nt)
-end
-
-## Postprocessing, mirrors decompression code
-
-function postprocess!(
-    color::AbstractVector{<:Integer},
-    star_or_tree_set::Union{StarSet,TreeSet},
-    g::AdjacencyGraph,
-    offsets::AbstractVector{<:Integer},
-)
-    S = pattern(g)
-    edge_to_index = edge_indices(g)
-    # flag which colors are actually used during decompression
-    nb_colors = maximum(color)
-    color_used = zeros(Bool, nb_colors)
-
-    # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
-    if has_diagonal(g)
-        for i in axes(S, 1)
-            if !iszero(S[i, i])
-                color_used[color[i]] = true
-            end
-        end
-    end
-
-    if star_or_tree_set isa StarSet
-        # only the colors of the hubs are used
-        (; star, hub) = star_or_tree_set
-        nb_trivial_stars = 0
-
-        # Iterate through all non-trivial stars
-        for s in eachindex(hub)
-            h = hub[s]
-            if h > 0
-                color_used[color[h]] = true
-            else
-                nb_trivial_stars += 1
-            end
-        end
-
-        # Process the trivial stars (if any)
-        if nb_trivial_stars > 0
-            rvS = rowvals(S)
-            for j in axes(S, 2)
-                for k in nzrange(S, j)
-                    i = rvS[k]
-                    if i > j
-                        index_ij = edge_to_index[k]
-                        s = star[index_ij]
-                        h = hub[s]
-                        if h < 0
-                            h = abs(h)
-                            spoke = h == j ? i : j
-                            if color_used[color[spoke]]
-                                # Switch the hub and the spoke to possibly avoid adding one more used color
-                                hub[s] = spoke
-                            else
-                                # Keep the current hub
-                                color_used[color[h]] = true
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    else
-        # only the colors of non-leaf vertices are used
-        (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = star_or_tree_set
-        nb_trivial_trees = 0
-
-        # Iterate through all non-trivial trees
-        for k in 1:nt
-            # Position of the first edge in the tree
-            first = tree_edge_indices[k]
-
-            # Total number of edges in the tree
-            ne_tree = tree_edge_indices[k + 1] - first
-
-            # Check if we have more than one edge in the tree (non-trivial tree)
-            if ne_tree > 1
-                # Determine if the tree is a star
-                if is_star[k]
-                    # It is a non-trivial star and only the color of the hub is needed
-                    (_, hub) = reverse_bfs_orders[first]
-                    color_used[color[hub]] = true
-                else
-                    # It is not a star and both colors are needed during the decompression
-                    (i, j) = reverse_bfs_orders[first]
-                    color_used[color[i]] = true
-                    color_used[color[j]] = true
-                end
-            else
-                nb_trivial_trees += 1
-            end
-        end
-
-        # Process the trivial trees (if any)
-        if nb_trivial_trees > 0
-            for k in 1:nt
-                # Position of the first edge in the tree
-                first = tree_edge_indices[k]
-
-                # Total number of edges in the tree
-                ne_tree = tree_edge_indices[k + 1] - first
-
-                # Check if we have exactly one edge in the tree
-                if ne_tree == 1
-                    (i, j) = reverse_bfs_orders[first]
-                    if color_used[color[i]]
-                        # Make i the root to avoid possibly adding one more used color
-                        # Switch it with the (only) leaf
-                        reverse_bfs_orders[first] = (j, i)
-                    else
-                        # Keep j as the root
-                        color_used[color[j]] = true
-                    end
-                end
-            end
-        end
-    end
-
-    # if at least one of the colors is useless, modify the color assignments of vertices
-    if any(!, color_used)
-        num_colors_useless = 0
-
-        # determine what are the useless colors and compute the offsets
-        for ci in 1:nb_colors
-            if color_used[ci]
-                offsets[ci] = num_colors_useless
-            else
-                num_colors_useless += 1
-            end
-        end
-
-        # assign the neutral color to every vertex with a useless color and remap the colors
-        for i in eachindex(color)
-            ci = color[i]
-            if !color_used[ci]
-                # assign the neutral color
-                color[i] = 0
-            else
-                # remap the color to not have any gap
-                color[i] -= offsets[ci]
-            end
-        end
-    end
-    return color
 end

@@ -279,7 +279,7 @@ function _coloring(
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
-    ag = AdjacencyGraph(A; has_diagonal=true)
+    ag = AdjacencyGraph(A; augmented_graph=false)
     color_and_star_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         return star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
@@ -300,12 +300,18 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    ag = AdjacencyGraph(A; has_diagonal=true)
+    ag = AdjacencyGraph(A; augmented_graph=false)
     color_and_tree_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         return acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
     end
-    color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
+    # if `color` is empty, `maximum` will fail but `color_and_tree_set_by_order`
+    # is also one so we can just add a special case for this
+    if length(color_and_tree_set_by_order) == 1
+        color, tree_set = only(color_and_tree_set_by_order)
+    else
+        color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
+    end
     if speed_setting isa WithResult
         return TreeSetColoringResult(A, ag, color, tree_set, R)
     else
@@ -323,7 +329,7 @@ function _coloring(
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index, 0; augmented_graph=true)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         _color, _star_set = star_coloring(
@@ -370,7 +376,7 @@ function _coloring(
     symmetric_pattern::Bool,
 ) where {R}
     A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
-    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index; has_diagonal=false)
+    ag = AdjacencyGraph(A_and_Aᵀ, edge_to_index, 0; augmented_graph=true)
     outputs_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
         _color, _tree_set = acyclic_coloring(ag, vertices_in_order, algo.postprocessing)

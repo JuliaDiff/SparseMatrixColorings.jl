@@ -82,6 +82,9 @@ Create a color-indexed vector `group` such that `i ∈ group[c]` iff `color[i] =
 Assumes the colors are contiguously numbered from `0` to some `cmax`.
 """
 function group_by_color(::Type{T}, color::AbstractVector) where {T<:Integer}
+    if isempty(color)
+        return typeof(view(T[], 1:0))[]
+    end
     cmin, cmax = extrema(color)
     @assert cmin >= 0
     # Compute group sizes and offsets for a joint storage
@@ -105,7 +108,7 @@ function group_by_color(::Type{T}, color::AbstractVector) where {T<:Integer}
     group = map(1:cmax) do c
         i = 1 + (c == 1 ? 0 : group_offsets[c - 1])
         j = group_offsets[c]
-        view(group_flat, i:j)
+        return view(group_flat, i:j)
     end
     return group
 end
@@ -401,31 +404,31 @@ function TreeSetColoringResult(
     decompression_eltype::Type{R},
 ) where {T<:Integer,R}
     (; reverse_bfs_orders, tree_edge_indices, nt) = tree_set
-    (; S) = ag
+    (; S, nb_self_loops) = ag
     nvertices = length(color)
     group = group_by_color(T, color)
     rv = rowvals(S)
 
     # Vector for the decompression of the diagonal coefficients
-    diagonal_indices = T[]
-    diagonal_nzind = T[]
-    ndiag = 0
+    diagonal_indices = Vector{T}(undef, nb_self_loops)
+    diagonal_nzind = Vector{T}(undef, nb_self_loops)
 
-    if has_diagonal(ag)
+    if !augmented_graph(ag)
+        l = 0
         for j in axes(S, 2)
             for k in nzrange(S, j)
                 i = rv[k]
                 if i == j
-                    push!(diagonal_indices, i)
-                    push!(diagonal_nzind, k)
-                    ndiag += 1
+                    l += 1
+                    diagonal_indices[l] = i
+                    diagonal_nzind[l] = k
                 end
             end
         end
     end
 
     # Vectors for the decompression of the off-diagonal coefficients
-    nedges = (nnz(S) - ndiag) ÷ 2
+    nedges = nb_edges(ag)
     lower_triangle_offsets = Vector{T}(undef, nedges)
     upper_triangle_offsets = Vector{T}(undef, nedges)
 

@@ -12,7 +12,10 @@ using SparseMatrixColorings:
     respectful_similar,
     structurally_orthogonal_columns,
     symmetrically_orthogonal_columns,
-    structurally_biorthogonal
+    structurally_biorthogonal,
+    substitutable_columns,
+    substitutable_bidirectional,
+    rank_nonzeros_from_trees
 using Test
 
 const _ALL_ORDERS = (
@@ -77,7 +80,6 @@ function test_coloring_decompression(
         end
 
         @testset "Recoverability" begin
-            # TODO: find tests for recoverability for substitution decompression
             if decompression == :direct
                 if structure == :nonsymmetric
                     if partition == :column
@@ -93,6 +95,15 @@ function test_coloring_decompression(
                         @test symmetrically_orthogonal_columns(A0, color)
                         @test directly_recoverable_columns(A0, color)
                     end
+                end
+            end
+        end
+
+        @testset "Substitutable" begin
+            if decompression == :substitution
+                if structure == :symmetric
+                    rank_nonzeros = rank_nonzeros_from_trees(result)
+                    @test substitutable_columns(A0, rank_nonzeros, color)
                 end
             end
         end
@@ -233,6 +244,15 @@ function test_bicoloring_decompression(
         if decompression == :direct
             @testset "Recoverability" begin
                 @test structurally_biorthogonal(A0, row_color, column_color)
+            end
+        end
+
+        if decompression == :substitution
+            @testset "Substitutable" begin
+                rank_nonzeros = rank_nonzeros_from_trees(result)
+                @test substitutable_bidirectional(
+                    A0, rank_nonzeros, row_color, column_color
+                )
             end
         end
     end

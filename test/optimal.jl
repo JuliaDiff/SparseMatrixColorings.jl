@@ -15,13 +15,14 @@ asymmetric_params = vcat(
 algo = GreedyColoringAlgorithm()
 optalgo = OptimalColoringAlgorithm(() -> MiniZinc.Optimizer{Float64}("highs"); silent=false)
 
+# TODO: reactivate tests once https://github.com/jump-dev/MiniZinc.jl/issues/103 is fixed
+
 @testset "Column coloring" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:column)
     for (m, n, p) in asymmetric_params
         A = sprand(rng, m, n, p)
         result = coloring(A, problem, algo)
-        optresult = coloring(A, problem, optalgo)
-        @test ncolors(result) >= ncolors(optresult)
+        @test_skip ncolors(result) >= ncolors(coloring(A, problem, optalgo))
     end
 end
 
@@ -30,8 +31,7 @@ end
     for (m, n, p) in asymmetric_params
         A = sprand(rng, m, n, p)
         result = coloring(A, problem, algo)
-        optresult = coloring(A, problem, optalgo)
-        @test ncolors(result) >= ncolors(optresult)
+        @test_skip ncolors(result) >= ncolors(coloring(A, problem, optalgo))
     end
 end
 
