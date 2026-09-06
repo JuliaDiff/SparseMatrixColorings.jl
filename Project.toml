@@ -28,7 +28,7 @@ SparseMatrixColoringsJuMPExt = ["JuMP", "MathOptInterface"]
 
 [compat]
 ADTypes = "1.2.1"
-AMDGPU = "2.1.2"
+AMDGPU = "2.8.0"
 CUDA = "5.8.2"
 CliqueTrees = "1"
 Colors = "0.12.11, 0.13"
