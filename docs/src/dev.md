@@ -41,6 +41,7 @@ SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
 SparseMatrixColorings.BicoloringResult
 SparseMatrixColorings.remap_colors
+SparseMatrixColorings.decompress_csc!
 ```
 
 ## Testing
@@ -50,6 +51,9 @@ SparseMatrixColorings.directly_recoverable_columns
 SparseMatrixColorings.symmetrically_orthogonal_columns
 SparseMatrixColorings.structurally_orthogonal_columns
 SparseMatrixColorings.structurally_biorthogonal
+SparseMatrixColorings.substitutable_columns
+SparseMatrixColorings.substitutable_bidirectional
+SparseMatrixColorings.rank_nonzeros_from_trees
 SparseMatrixColorings.valid_dynamic_order
 ```
 

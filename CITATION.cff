@@ -18,7 +18,7 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.11314275
     description: Zenodo
-repository-code: 'https://github.com/gdalle/SparseMatrixColorings.jl'
+repository-code: 'https://github.com/JuliaDiff/SparseMatrixColorings.jl'
 abstract: >-
   Coloring algorithms for sparse Jacobian and Hessian
   matrices

@@ -49,12 +49,12 @@ function compress(A, result::AbstractColoringResult{structure,:column}) where {s
     if isempty(group)
         # ensure we get a Matrix and not a SparseMatrixCSC
         B_model = stack([Int[]]; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+            return dropdims(sum(A[:, g]; dims=2); dims=2)
         end
         B = similar(B_model, size(A, 1), 0)
     else
         B = stack(group; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+            return dropdims(sum(A[:, g]; dims=2); dims=2)
         end
     end
     return B
@@ -65,12 +65,12 @@ function compress(A, result::AbstractColoringResult{structure,:row}) where {stru
     if isempty(group)
         # ensure we get a Matrix and not a SparseMatrixCSC
         B_model = stack([Int[]]; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+            return dropdims(sum(A[g, :]; dims=1); dims=1)
         end
         B = similar(B_model, 0, size(A, 2))
     else
         B = stack(group; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+            return dropdims(sum(A[g, :]; dims=1); dims=1)
         end
     end
     return B
@@ -84,23 +84,23 @@ function compress(
     if isempty(row_group)
         # ensure we get a Matrix and not a SparseMatrixCSC
         Br_model = stack([Int[]]; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+            return dropdims(sum(A[g, :]; dims=1); dims=1)
         end
         Br = similar(Br_model, 0, size(A, 2))
     else
         Br = stack(row_group; dims=1) do g
-            dropdims(sum(A[g, :]; dims=1); dims=1)
+            return dropdims(sum(A[g, :]; dims=1); dims=1)
         end
     end
     if isempty(column_group)
         # ensure we get a Matrix and not a SparseMatrixCSC
         Bc_model = stack([Int[]]; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+            return dropdims(sum(A[:, g]; dims=2); dims=2)
         end
         Bc = similar(Bc_model, size(A, 1), 0)
     else
         Bc = stack(column_group; dims=2) do g
-            dropdims(sum(A[:, g]; dims=2); dims=2)
+            return dropdims(sum(A[:, g]; dims=2); dims=2)
         end
     end
     return Br, Bc
@@ -585,8 +585,23 @@ function decompress!(
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC{R},
+"""
+   decompress_csc!(
+        nzA::AbstractVector{R},
+        A_colptr::AbstractVector,
+        B::AbstractMatrix{R},
+        result::TreeSetColoringResult,
+        uplo::Symbol=:F,
+    ) where {R<:Real}
+
+Decompress the values of `B` into the vector of nonzero entries `nzA` of a
+sparse matrix with column pointers `colptr`. This function assumes that the
+row indices are sorted in increasing order and are the same as those of the
+sparse matrix given to the `coloring` function that returned `result`.
+"""
+function decompress_csc!(
+    nzA::AbstractVector{R},
+    A_colptr::AbstractVector{<:Integer},
     B::AbstractMatrix{R},
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
@@ -603,10 +618,6 @@ function decompress!(
         upper_triangle_offsets,
         buffer,
     ) = result
-    (; S) = ag
-    A_colptr = A.colptr
-    nzA = nonzeros(A)
-    check_compatible_pattern(A, ag, uplo)
 
     if eltype(buffer) == R
         buffer_right_type = buffer
@@ -696,6 +707,17 @@ function decompress!(
             #! format: on
         end
     end
+    return nothing
+end
+
+function decompress!(
+    A::SparseMatrixCSC{R},
+    B::AbstractMatrix{R},
+    result::TreeSetColoringResult,
+    uplo::Symbol=:F,
+) where {R<:Real}
+    check_compatible_pattern(A, result.ag, uplo)
+    decompress_csc!(nonzeros(A), A.colptr, B, result, uplo)
     return A
 end
 
