@@ -101,10 +101,13 @@ end
 """
     bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
 
-Return a [`SparsityPatternCSC`](@ref) corresponding to the matrix `[0 Aᵀ; A 0]`, with a minimum of allocations.
+Return the [`SparsityPatternCSC`](@ref) `S` of `A`, the [`SparsityPatternCSC`](@ref) `S_and_Sᵀ` corresponding to the matrix `[0 Aᵀ; A 0]`, and the mapping `edge_to_index`, with a minimum of allocations.
+
+`S` is returned alongside `S_and_Sᵀ` because bidirectional decompression indexes directly into the nonzeros of `A`.
 """
 function bidirectional_pattern(A::AbstractMatrix; symmetric_pattern::Bool)
-    return bidirectional_pattern(SparsityPatternCSC(SparseMatrixCSC(A)); symmetric_pattern)
+    S = SparsityPatternCSC(SparseMatrixCSC(A))
+    return bidirectional_pattern(S; symmetric_pattern)
 end
 
 function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool) where {T}
@@ -176,7 +179,7 @@ function bidirectional_pattern(S::SparsityPatternCSC{T}; symmetric_pattern::Bool
 
     # Create the SparsityPatternCSC of the augmented adjacency matrix
     S_and_Sᵀ = SparsityPatternCSC{T}(p, p, colptr, rowval)
-    return S_and_Sᵀ, edge_to_index
+    return S, S_and_Sᵀ, edge_to_index
 end
 
 function build_edge_to_index(S::SparsityPatternCSC{T}) where {T}

@@ -39,7 +39,8 @@ SparseMatrixColorings.RowColoringResult
 SparseMatrixColorings.StarSetColoringResult
 SparseMatrixColorings.TreeSetColoringResult
 SparseMatrixColorings.LinearSystemColoringResult
-SparseMatrixColorings.BicoloringResult
+SparseMatrixColorings.StarSetBicoloringResult
+SparseMatrixColorings.TreeSetBicoloringResult
 SparseMatrixColorings.remap_colors
 SparseMatrixColorings.decompress_csc!
 ```
