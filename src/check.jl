@@ -503,7 +503,7 @@ end
 
 """
     rank_nonzeros_from_trees(result::TreeSetColoringResult)
-    rank_nonzeros_from_trees(result::BicoloringResult)
+    rank_nonzeros_from_trees(result::TreeSetBicoloringResult)
 
 Construct a sparse matrix `rank_nonzeros` that assigns a unique recovery rank
 to each nonzero coefficient associated with an acyclic coloring or bicoloring.
@@ -543,19 +543,11 @@ function rank_nonzeros_from_trees(result::TreeSetColoringResult)
     return rank_nonzeros
 end
 
-function rank_nonzeros_from_trees(result::BicoloringResult)
-    (; A, abg, row_color, column_color, symmetric_result, large_colptr, large_rowval) =
-        result
-    @assert symmetric_result isa TreeSetColoringResult
-    (; ag, reverse_bfs_orders, tree_edge_indices, nt) = symmetric_result
-    (; S) = ag
+function rank_nonzeros_from_trees(result::TreeSetBicoloringResult)
+    (; A, S, reverse_bfs_orders, tree_edge_indices, nt) = result
     m, n = size(A)
-    nnzA = nnz(S) ÷ 2
-    nzval = zeros(Int, nnzA)
-    colptr = large_colptr[1:(n + 1)]
-    rowval = large_rowval[1:nnzA]
-    rowval .-= n
-    rank_nonzeros = SparseMatrixCSC(m, n, colptr, rowval, nzval)
+    nzval = zeros(Int, nnz(S))
+    rank_nonzeros = SparseMatrixCSC(m, n, S.colptr, S.rowval, nzval)
     counter = 0
     for k in 1:nt
         first = tree_edge_indices[k]

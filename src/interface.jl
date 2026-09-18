@@ -338,7 +338,7 @@ function _coloring(
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
-    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    S, A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(
         A_and_Aᵀ, edge_to_index, 0; augmented_graph=true, original_size=size(A)
     )
@@ -368,16 +368,16 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = StarSetColoringResult(A_and_Aᵀ, ag, color, star_set)
-        return BicoloringResult(
+        return StarSetBicoloringResult(
             A,
+            S,
             ag,
-            symmetric_result,
+            color,
+            star_set,
             row_color,
             column_color,
             symmetric_to_row,
             symmetric_to_column,
-            R,
         )
     else
         return row_color, column_color
@@ -392,7 +392,7 @@ function _coloring(
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
 ) where {R}
-    A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
+    S, A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)
     ag = AdjacencyGraph(
         A_and_Aᵀ, edge_to_index, 0; augmented_graph=true, original_size=size(A)
     )
@@ -418,11 +418,12 @@ function _coloring(
         t -> maximum(t[3]) + maximum(t[4]), outputs_by_order
     )  # can't use ncolors without computing the full result
     if speed_setting isa WithResult
-        symmetric_result = TreeSetColoringResult(A_and_Aᵀ, ag, color, tree_set, R)
-        return BicoloringResult(
+        return TreeSetBicoloringResult(
             A,
+            S,
             ag,
-            symmetric_result,
+            color,
+            tree_set,
             row_color,
             column_color,
             symmetric_to_row,

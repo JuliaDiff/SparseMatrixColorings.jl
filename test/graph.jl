@@ -36,7 +36,11 @@ using Test
                 p = 0.05 * rand()
                 A = sprand(Bool, m, n, p)
                 A_and_Aᵀ = [spzeros(Bool, n, n) transpose(A); A spzeros(Bool, m, m)]
-                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=false)
+                S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(
+                    A; symmetric_pattern=false
+                )
+                @test S.colptr == A.colptr
+                @test S.rowval == A.rowval
                 @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
                 @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
                 M = SparseMatrixCSC(
@@ -51,7 +55,11 @@ using Test
                 p = 0.05 * rand()
                 A = sparse(Symmetric(sprand(Bool, m, m, p)))
                 A_and_Aᵀ = [spzeros(Bool, m, m) transpose(A); A spzeros(Bool, m, m)]
-                S_and_Sᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern=true)
+                S, S_and_Sᵀ, edge_to_index = bidirectional_pattern(
+                    A; symmetric_pattern=true
+                )
+                @test S.colptr == A.colptr
+                @test S.rowval == A.rowval
                 @test S_and_Sᵀ.colptr == A_and_Aᵀ.colptr
                 @test S_and_Sᵀ.rowval == A_and_Aᵀ.rowval
                 M = SparseMatrixCSC(
