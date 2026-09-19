@@ -34,7 +34,13 @@ function SMC.StarSetColoringResult(
     star_set::SMC.StarSet{<:Integer},
     decompression_uplo::Symbol,
 ) where {T<:Integer}
-    @assert decompression_uplo == :F
+    if decompression_uplo != :F
+        throw(
+            SMC.UnsupportedDecompressionError(
+                "Single-triangle decompression is not supported on GPU matrices"
+            ),
+        )
+    end
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
     additional_info = (; compressed_indices_gpu_csc=CuVector(compressed_indices))
@@ -74,7 +80,13 @@ function SMC.StarSetColoringResult(
     star_set::SMC.StarSet{<:Integer},
     decompression_uplo::Symbol,
 ) where {T<:Integer}
-    @assert decompression_uplo == :F
+    if decompression_uplo != :F
+        throw(
+            SMC.UnsupportedDecompressionError(
+                "Single-triangle decompression is not supported on GPU matrices"
+            ),
+        )
+    end
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
     additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices))
@@ -108,15 +120,7 @@ function SMC.decompress!(
     A::CuSparseMatrixCSC,
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSC},
-    uplo::Symbol=:F,
 )
-    if uplo != :F
-        throw(
-            SMC.UnsupportedDecompressionError(
-                "Single-triangle decompression is not supported on GPU matrices"
-            ),
-        )
-    end
     compressed_indices = result.additional_info.compressed_indices_gpu_csc
     copyto!(A.nzVal, view(B, compressed_indices))
     return A
@@ -126,15 +130,7 @@ function SMC.decompress!(
     A::CuSparseMatrixCSR,
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSR},
-    uplo::Symbol=:F,
 )
-    if uplo != :F
-        throw(
-            SMC.UnsupportedDecompressionError(
-                "Single-triangle decompression is not supported on GPU matrices"
-            ),
-        )
-    end
     compressed_indices = result.additional_info.compressed_indices_gpu_csr
     copyto!(A.nzVal, view(B, compressed_indices))
     return A

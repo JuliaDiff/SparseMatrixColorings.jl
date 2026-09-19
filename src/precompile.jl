@@ -1,13 +1,15 @@
-for (structure, partition, decompression) in [
-    (:nonsymmetric, :column, :direct),
-    (:nonsymmetric, :row, :direct),
-    (:symmetric, :column, :direct),
-    (:symmetric, :column, :substitution),
-    (:nonsymmetric, :bidirectional, :direct),
-    (:nonsymmetric, :bidirectional, :substitution),
+for (structure, partition, decompression, uplo) in [
+    (:nonsymmetric, :column, :direct, :F),
+    (:nonsymmetric, :row, :direct, :F),
+    (:symmetric, :column, :direct, :F),
+    (:symmetric, :column, :direct, :L),
+    (:symmetric, :column, :substitution, :F),
+    (:symmetric, :column, :substitution, :L),
+    (:nonsymmetric, :bidirectional, :direct, :F),
+    (:nonsymmetric, :bidirectional, :substitution, :F),
 ]
     A = sparse(Bool[1 0; 0 1])
-    problem = ColoringProblem(; structure, partition)
+    problem = ColoringProblem(; structure, partition, uplo)
     algo = GreedyColoringAlgorithm(; decompression, postprocessing=true)
     result = coloring(A, problem, algo)
     if partition == :bidirectional

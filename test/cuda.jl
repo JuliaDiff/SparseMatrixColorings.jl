@@ -52,11 +52,9 @@ end;
             A0 = T(sparse(Symmetric(sprand(rng, n, n, p))))
             test_coloring_decompression(A0, problem, algo; gpu=true)
         end
+        # the triangle is now selected by the problem, so the error fires at coloring time
         A0 = T(sparse(Diagonal(ones(10))))
-        result = coloring(A0, problem, algo)
-        B = compress(A0, result)
-        @test_throws SMC.UnsupportedDecompressionError decompress!(
-            similar(A0), B, result, :U
-        )
+        problem_U = ColoringProblem(; structure=:symmetric, partition=:column, uplo=:U)
+        @test_throws SMC.UnsupportedDecompressionError coloring(A0, problem_U, algo)
     end
 end;

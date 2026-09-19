@@ -2,11 +2,11 @@
 
 function coloring(
     A::AbstractMatrix,
-    problem::ColoringProblem{structure,partition},
+    problem::ColoringProblem{structure,partition,uplo},
     algo::ADTypes.AbstractColoringAlgorithm;
     decompression_eltype::Type{R}=Float64,
     symmetric_pattern::Bool=false,
-) where {structure,partition,R}
+) where {structure,partition,uplo,R}
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     if structure == :nonsymmetric
         if partition == :column

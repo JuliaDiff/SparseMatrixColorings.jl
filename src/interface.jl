@@ -1,4 +1,4 @@
-function check_valid_problem(structure::Symbol, partition::Symbol)
+function check_valid_problem(structure::Symbol, partition::Symbol, uplo::Symbol=:F)
     valid = (
         (structure == :nonsymmetric && partition in (:column, :row, :bidirectional)) ||
         (structure == :symmetric && partition == :column)
@@ -7,6 +7,20 @@ function check_valid_problem(structure::Symbol, partition::Symbol)
         throw(
             ArgumentError(
                 "The combination `($(repr(structure)), $(repr(partition)))` is not supported by `ColoringProblem`.",
+            ),
+        )
+    end
+    if !(uplo in (:F, :L, :U))
+        throw(
+            ArgumentError(
+                "The setting `uplo=$(repr(uplo))` is not supported by `ColoringProblem`, it must be `:F`, `:L` or `:U`.",
+            ),
+        )
+    end
+    if uplo != :F && structure != :symmetric
+        throw(
+            ArgumentError(
+                "The setting `uplo=$(repr(uplo))` is only supported for `structure=:symmetric`, not `structure=$(repr(structure))`.",
             ),
         )
     end
@@ -24,7 +38,7 @@ function check_valid_algorithm(decompression::Symbol)
 end
 
 """
-    ColoringProblem{structure,partition}
+    ColoringProblem{structure,partition,uplo}
 
 Selector type for the coloring problem to solve, enabling multiple dispatch.
 
@@ -32,14 +46,23 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
+    ColoringProblem{structure,partition,uplo}()
     ColoringProblem{structure,partition}()
-    ColoringProblem(; structure=:nonsymmetric, partition=:column)
+    ColoringProblem(; structure=:nonsymmetric, partition=:column, uplo=:F)
 
 - `structure::Symbol`: either `:nonsymmetric` or `:symmetric`
 - `partition::Symbol`: either `:column`, `:row` or `:bidirectional`
+- `uplo::Symbol`: either `:F` (full matrix), `:L` (lower triangle) or `:U` (upper triangle)
+
+The `uplo` setting selects which part of the matrix the decompression will fill in.
+It is only supported for `structure=:symmetric`, and it defaults to `:F`, so that
+`ColoringProblem{structure,partition}()` keeps working as before.
+
+Since `uplo` is fixed when the problem is created, a given coloring result decompresses into
+exactly one triangle: build one result per triangle if you need several.
 
 !!! warning
-    The second constructor (based on keyword arguments) is type-unstable.
+    The last constructor (based on keyword arguments) is type-unstable.
 
 #  Link to automatic differentiation
 
@@ -53,11 +76,19 @@ Matrix coloring is often used in automatic differentiation, and here is the tran
 | Hessian  | -       | `:symmetric`    | `:column`        | yes         |
 | Hessian  | -       | `:symmetric`    | `:row`           | no          |
 """
-struct ColoringProblem{structure,partition} end
+struct ColoringProblem{structure,partition,uplo} end
 
-function ColoringProblem(; structure::Symbol=:nonsymmetric, partition::Symbol=:column)
-    check_valid_problem(structure, partition)
-    return ColoringProblem{structure,partition}()
+# `ColoringProblem{structure,partition}` is the UnionAll `ColoringProblem{structure,partition,uplo} where uplo`,
+# so this outer constructor keeps the historical two-parameter form working.
+function ColoringProblem{structure,partition}() where {structure,partition}
+    return ColoringProblem{structure,partition,:F}()
+end
+
+function ColoringProblem(;
+    structure::Symbol=:nonsymmetric, partition::Symbol=:column, uplo::Symbol=:F
+)
+    check_valid_problem(structure, partition, uplo)
+    return ColoringProblem{structure,partition,uplo}()
 end
 
 """
@@ -283,12 +314,12 @@ end
 function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
-    ::ColoringProblem{:symmetric,:column},
+    ::ColoringProblem{:symmetric,:column,uplo},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
-)
+) where {uplo}
     ag = AdjacencyGraph(A; augmented_graph=false, original_size=size(A))
     color_and_star_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
@@ -296,7 +327,7 @@ function _coloring(
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, star_set, :F)
+        return StarSetColoringResult(A, ag, color, star_set, uplo)
     else
         return color
     end
@@ -305,11 +336,11 @@ end
 function _coloring(
     speed_setting::WithOrWithoutResult,
     A::AbstractMatrix,
-    ::ColoringProblem{:symmetric,:column},
+    ::ColoringProblem{:symmetric,:column,uplo},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
     symmetric_pattern::Bool,
-) where {R}
+) where {R,uplo}
     ag = AdjacencyGraph(A; augmented_graph=false, original_size=size(A))
     color_and_tree_set_by_order = map(algo.orders) do order
         vertices_in_order = vertices(ag, order)
@@ -323,7 +354,7 @@ function _coloring(
         color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     end
     if speed_setting isa WithResult
-        return TreeSetColoringResult(A, ag, color, tree_set, R, :F)
+        return TreeSetColoringResult(A, ag, color, tree_set, R, uplo)
     else
         return color
     end

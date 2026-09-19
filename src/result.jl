@@ -550,6 +550,7 @@ struct LinearSystemColoringResult{
     strict_upper_nonzero_inds::Vector{Tuple{T,T}}
     strict_upper_nonzeros_A::Vector{R}  # TODO: adjust type
     M_factorization::F  # TODO: adjust type
+    decompression_uplo::Symbol
 end
 
 function LinearSystemColoringResult(
@@ -557,6 +558,7 @@ function LinearSystemColoringResult(
     ag::AdjacencyGraph{T},
     color::Vector{<:Integer},
     decompression_eltype::Type{R},
+    decompression_uplo::Symbol=:F,
 ) where {T<:Integer,R<:Real}
     group = group_by_color(T, color)
     C = length(group)  # ncolors
@@ -601,6 +603,7 @@ function LinearSystemColoringResult(
         strict_upper_nonzero_inds,
         strict_upper_nonzeros_A,
         M_factorization,
+        decompression_uplo,
     )
 end
 

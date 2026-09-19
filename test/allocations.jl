@@ -62,11 +62,20 @@ function test_noallocs_sparse_decompression(
                 @test minimum(bench2_singlecolor).allocs == 0
             end
         end
+        # the triangle is selected by the problem, so it needs its own result
+        result_U = if structure == :symmetric
+            coloring(
+                A,
+                ColoringProblem(; structure, partition, uplo=:U),
+                GreedyColoringAlgorithm(; decompression),
+            )
+        else
+            nothing
+        end
         @testset "Triangle decompression" begin
             if structure == :symmetric
-                bench1_triangle = @be similar(triu(A)) decompress!(_, B, result, :U) evals =
-                    1
-                bench2_triangle = @be similar(Matrix(A)) decompress!(_, B, result, :U) evals =
+                bench1_triangle = @be similar(triu(A)) decompress!(_, B, result_U) evals = 1
+                bench2_triangle = @be similar(Matrix(A)) decompress!(_, B, result_U) evals =
                     1
                 @test minimum(bench1_triangle).allocs == 0
                 @test minimum(bench2_triangle).allocs == 0
@@ -76,10 +85,10 @@ function test_noallocs_sparse_decompression(
             if structure == :symmetric && decompression == :direct
                 b = B[:, 1]
                 bench1_singlecolor_triangle = @be similar(triu(A)) decompress_single_color!(
-                    _, b, 1, result, :U
+                    _, b, 1, result_U
                 ) evals = 1
                 bench2_singlecolor_triangle = @be similar(Matrix(A)) decompress_single_color!(
-                    _, b, 1, result, :U
+                    _, b, 1, result_U
                 ) evals = 1
                 @test minimum(bench1_singlecolor_triangle).allocs == 0
                 @test minimum(bench2_singlecolor_triangle).allocs == 0
