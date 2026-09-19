@@ -60,7 +60,7 @@ Finally, a background color can be passed via the `background` keyword argument.
 
 We demonstrate this on a bidirectional coloring.
 
-```@example img; continue = true
+```@example img; continued = true
 S = sparse([
     1 1 1 1 1 1 1 1 1
     1 0 0 0 0 0 0 0 1
