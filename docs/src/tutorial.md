@@ -23,7 +23,8 @@ SparseMatrixColorings.jl is based on the combination of a coloring problem and a
 The problem defines what you want to solve. It is always a [`ColoringProblem`](@ref), and you can select options such as
 
 - the structure of the matrix (`:nonsymmetric` or `:symmetric`)
-- the type of partition you want (`:column`, `:row` or `:bidirectional`).
+- the type of partition you want (`:column`, `:row` or `:bidirectional`)
+- the part of the matrix you want to recover during decompression (`:F` for the full matrix, `:L` for its lower triangle or `:U` for its upper triangle). This option is only available for `:symmetric` problems, and it is fixed once and for all here, so it never has to be repeated at decompression time.
 
 ```@example tutorial
 problem = ColoringProblem()
@@ -210,6 +211,19 @@ and its columnwise compression
 ```@example tutorial
 B_img # hide
 ```
+
+#### Recovering a single triangle
+
+Since a symmetric matrix is redundant, you can ask for only one of its triangles with the `uplo` option of the problem.
+The choice is made once, at coloring time, and the decompression then fills in that triangle only:
+
+```@example tutorial
+problem_U = ColoringProblem(; structure=:symmetric, partition=:column, uplo=:U)
+result_U = coloring(S, problem_U, algo)
+decompress(compress(S, result_U), result_U)
+```
+
+A given result decompresses into exactly one triangle, so build one result per triangle if you need several.
 
 ### Acyclic coloring
 

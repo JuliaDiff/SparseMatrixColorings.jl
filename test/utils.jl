@@ -24,13 +24,13 @@ const _ALL_ORDERS = (
 
 function test_coloring_decompression(
     A0::AbstractMatrix,
-    problem::ColoringProblem{structure,partition},
+    problem::ColoringProblem{structure,partition,uplo},
     algo::GreedyColoringAlgorithm{decompression};
     B0=nothing,
     color0=nothing,
     test_fast=false,
     gpu=false,
-) where {structure,partition,decompression}
+) where {structure,partition,uplo,decompression}
     color_vec = Vector{Int}[]
     @testset "$(typeof(A))" for A in matrix_versions(A0)
         yield()
@@ -124,8 +124,30 @@ function test_coloring_decompression(
             end
         end
 
+        # The triangle is now fixed when the problem is built, so one result decompresses
+        # into exactly one triangle: we need a sibling result per triangle.
+        if structure == :symmetric && uplo == :F
+            result_L = coloring(
+                A,
+                ColoringProblem{structure,partition,:L}(),
+                algo;
+                decompression_eltype=Float64,
+            )
+            result_U = coloring(
+                A,
+                ColoringProblem{structure,partition,:U}(),
+                algo;
+                decompression_eltype=Float64,
+            )
+        end
+
         @testset "Triangle decompression" begin
-            if structure == :symmetric
+            if structure == :symmetric && uplo == :F
+                # the three problems must agree on the colors, otherwise the single `B`
+                # computed above would not be valid for the sibling results
+                @test column_colors(result_L) == color
+                @test column_colors(result_U) == color
+
                 A3upper = respectful_similar(triu(A), eltype(B))
                 A3lower = respectful_similar(tril(A), eltype(B))
                 A3both = respectful_similar(A, eltype(B))
@@ -133,18 +155,22 @@ function test_coloring_decompression(
                 A3lower .= zero(eltype(A))
                 A3both .= zero(eltype(A))
 
-                decompress!(A3upper, B, result, :U)
-                decompress!(A3lower, B, result, :L)
-                decompress!(A3both, B, result, :F)
+                decompress!(A3upper, B, result_U)
+                decompress!(A3lower, B, result_L)
+                decompress!(A3both, B, result)
 
                 @test A3upper ≈ triu(A0)
                 @test A3lower ≈ tril(A0)
                 @test A3both ≈ A0
+
+                # out-of-place must allocate a target with the right triangular pattern
+                @test decompress(B, result_U) ≈ triu(A0)
+                @test decompress(B, result_L) ≈ tril(A0)
             end
         end
 
         @testset "Single-color triangle decompression" begin
-            if structure == :symmetric && decompression == :direct
+            if structure == :symmetric && uplo == :F && decompression == :direct
                 A4upper = respectful_similar(triu(A), eltype(B))
                 A4lower = respectful_similar(tril(A), eltype(B))
                 A4both = respectful_similar(A, eltype(B))
@@ -154,9 +180,9 @@ function test_coloring_decompression(
 
                 for c in unique(color)
                     c == 0 && continue
-                    decompress_single_color!(A4upper, B[:, c], c, result, :U)
-                    decompress_single_color!(A4lower, B[:, c], c, result, :L)
-                    decompress_single_color!(A4both, B[:, c], c, result, :F)
+                    decompress_single_color!(A4upper, B[:, c], c, result_U)
+                    decompress_single_color!(A4lower, B[:, c], c, result_L)
+                    decompress_single_color!(A4both, B[:, c], c, result)
                 end
 
                 @test A4upper ≈ triu(A0)
