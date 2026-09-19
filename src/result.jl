@@ -655,7 +655,12 @@ $TYPEDFIELDS
 - [`AbstractColoringResult`](@ref)
 """
 struct StarSetBicoloringResult{
-    M<:AbstractMatrix,T<:Integer,G<:AdjacencyGraph{T},GT<:AbstractGroups{T}
+    M<:AbstractMatrix,
+    T<:Integer,
+    G<:AdjacencyGraph{T},
+    GT<:AbstractGroups{T},
+    VT<:AbstractVector{T},
+    A,
 } <: AbstractColoringResult{:nonsymmetric,:bidirectional,:direct}
     "matrix that was colored"
     A::M
@@ -677,12 +682,16 @@ struct StarSetBicoloringResult{
     symmetric_to_column::Vector{T}
     "maps symmetric colors to row colors"
     symmetric_to_row::Vector{T}
-    "positions in `nonzeros(A)`, ordered so that the first `pos_Bc` are recovered from `Bc` and the rest from `Br`"
-    A_indices::Vector{T}
-    "linear indices in `Bc` (first `pos_Bc` entries) or in `Br` (remaining entries)"
-    compressed_indices::Vector{T}
-    "number of nonzero coefficients of `A` recovered from `Bc`"
-    pos_Bc::T
+    "increasing positions in `nonzeros(A)` of the coefficients recovered from `Bc`"
+    A_indices_bc::VT
+    "linear indices in `Bc` of those same coefficients"
+    compressed_indices_bc::VT
+    "increasing positions in `nonzeros(A)` of the coefficients recovered from `Br`"
+    A_indices_br::VT
+    "linear indices in `Br` of those same coefficients"
+    compressed_indices_br::VT
+    "optional data used for decompressing into specific matrix types"
+    additional_info::A
 end
 
 function StarSetBicoloringResult(
@@ -696,44 +705,16 @@ function StarSetBicoloringResult(
     symmetric_to_row::Vector{T},
     symmetric_to_column::Vector{T},
 ) where {T<:Integer}
-    m, n = size(A)
-    (; star, hub) = star_set
     column_group = group_by_color(T, column_color)
     row_group = group_by_color(T, row_color)
-    num_row_colors = length(row_group)
-
-    rvS = rowvals(S)
-    nnzA = nnz(S)
-    A_indices = Vector{T}(undef, nnzA)
-    compressed_indices = Vector{T}(undef, nnzA)
-
-    # Coefficients recovered from Bc are stored at the front of A_indices,
-    # those recovered from Br at the back.
-    pos_Bc = 0
-    pos_Br = nnzA + 1
-    for j in 1:n
-        for k in nzrange(S, j)
-            i = rvS[k]
-            s = star[k]
-            h = abs(hub[s])
-            if j == h
-                # j is the hub and (i + n) is the spoke
-                c = symmetric_color[j]
-                # A[i, j] = Bc[i, symmetric_to_column[c]]
-                pos_Bc += 1
-                A_indices[pos_Bc] = k
-                compressed_indices[pos_Bc] = (symmetric_to_column[c] - 1) * m + i
-            else  # i + n == h
-                # (i + n) is the hub and j is the spoke
-                c = symmetric_color[i + n]
-                # A[i, j] = Br[symmetric_to_row[c], j]
-                pos_Br -= 1
-                A_indices[pos_Br] = k
-                compressed_indices[pos_Br] = (j - 1) * num_row_colors + symmetric_to_row[c]
-            end
-        end
-    end
-
+    A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br = star_bicoloring_csc_indices(
+        S,
+        symmetric_color,
+        star_set,
+        symmetric_to_row,
+        symmetric_to_column,
+        length(row_group),
+    )
     return StarSetBicoloringResult(
         A,
         S,
@@ -745,10 +726,130 @@ function StarSetBicoloringResult(
         row_group,
         symmetric_to_column,
         symmetric_to_row,
-        A_indices,
-        compressed_indices,
-        T(pos_Bc),
+        A_indices_bc,
+        compressed_indices_bc,
+        A_indices_br,
+        compressed_indices_br,
+        nothing,
     )
+end
+
+#=
+Return `(A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br)` for a direct
+bidirectional decompression where the nonzero coefficients of `A` are stored in CSC order.
+They satisfy `nonzeros(A)[A_indices_bc[t]] = vec(Bc)[compressed_indices_bc[t]]` and
+`nonzeros(A)[A_indices_br[t]] = vec(Br)[compressed_indices_br[t]]`.
+`A_indices_bc` and `A_indices_br` are increasing and partition `1:nnz(S)`.
+=#
+function star_bicoloring_csc_indices(
+    S::SparsityPatternCSC{T},
+    symmetric_color::Vector{<:Integer},
+    star_set::StarSet{<:Integer},
+    symmetric_to_row::Vector{T},
+    symmetric_to_column::Vector{T},
+    num_row_colors::Integer,
+) where {T<:Integer}
+    m, n = size(S)
+    (; star, hub) = star_set
+    rvS = rowvals(S)
+    nnzA = nnz(S)
+    A_indices_bc = Vector{T}(undef, nnzA)
+    compressed_indices_bc = Vector{T}(undef, nnzA)
+    A_indices_br = Vector{T}(undef, nnzA)
+    compressed_indices_br = Vector{T}(undef, nnzA)
+
+    nb_bc = 0
+    nb_br = 0
+    for j in 1:n
+        for k in nzrange(S, j)
+            i = rvS[k]
+            # the first nnzA edges of the augmented graph are the nonzeros of A in CSC order
+            s = star[k]
+            h = abs(hub[s])
+            if j == h
+                # j is the hub and (i + n) is the spoke
+                c = symmetric_color[j]
+                # A[i, j] = Bc[i, symmetric_to_column[c]]
+                nb_bc += 1
+                A_indices_bc[nb_bc] = k
+                compressed_indices_bc[nb_bc] = (symmetric_to_column[c] - 1) * m + i
+            else  # i + n == h
+                # (i + n) is the hub and j is the spoke
+                c = symmetric_color[i + n]
+                # A[i, j] = Br[symmetric_to_row[c], j]
+                nb_br += 1
+                A_indices_br[nb_br] = k
+                compressed_indices_br[nb_br] =
+                    (j - 1) * num_row_colors + symmetric_to_row[c]
+            end
+        end
+    end
+    resize!(A_indices_bc, nb_bc)
+    resize!(compressed_indices_bc, nb_bc)
+    resize!(A_indices_br, nb_br)
+    resize!(compressed_indices_br, nb_br)
+    return A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br
+end
+
+#=
+Same as `star_bicoloring_csc_indices`, except that `A_indices` refers to the nonzero coefficients
+of `A` stored in CSR order.
+The columns `n+1:n+m` of the augmented adjacency graph hold `Aᵀ` in CSC order, which is exactly
+`A` in CSR order, and `edge_indices(ag)` maps each of those positions back to the CSC position of
+the same coefficient.
+=#
+function star_bicoloring_csr_indices(
+    ag::AdjacencyGraph{T},
+    S::SparsityPatternCSC{T},
+    symmetric_color::Vector{<:Integer},
+    star_set::StarSet{<:Integer},
+    symmetric_to_row::Vector{T},
+    symmetric_to_column::Vector{T},
+    num_row_colors::Integer,
+) where {T<:Integer}
+    m, n = size(S)
+    (; star, hub) = star_set
+    S_aug = pattern(ag)
+    edge_to_index = edge_indices(ag)
+    rv_aug = rowvals(S_aug)
+    nnzA = nnz(S)
+    A_indices_bc = Vector{T}(undef, nnzA)
+    compressed_indices_bc = Vector{T}(undef, nnzA)
+    A_indices_br = Vector{T}(undef, nnzA)
+    compressed_indices_br = Vector{T}(undef, nnzA)
+
+    nb_bc = 0
+    nb_br = 0
+    for i in 1:m
+        for t in nzrange(S_aug, n + i)
+            j = rv_aug[t]
+            k = edge_to_index[t]  # position of A[i, j] in CSC order
+            csr_position = t - nnzA  # position of A[i, j] in CSR order
+            s = star[k]
+            h = abs(hub[s])
+            if j == h
+                # j is the hub and (i + n) is the spoke
+                c = symmetric_color[j]
+                # A[i, j] = Bc[i, symmetric_to_column[c]]
+                nb_bc += 1
+                A_indices_bc[nb_bc] = csr_position
+                compressed_indices_bc[nb_bc] = (symmetric_to_column[c] - 1) * m + i
+            else  # i + n == h
+                # (i + n) is the hub and j is the spoke
+                c = symmetric_color[i + n]
+                # A[i, j] = Br[symmetric_to_row[c], j]
+                nb_br += 1
+                A_indices_br[nb_br] = csr_position
+                compressed_indices_br[nb_br] =
+                    (j - 1) * num_row_colors + symmetric_to_row[c]
+            end
+        end
+    end
+    resize!(A_indices_bc, nb_bc)
+    resize!(compressed_indices_bc, nb_bc)
+    resize!(A_indices_br, nb_br)
+    resize!(compressed_indices_br, nb_br)
+    return A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br
 end
 
 """

@@ -758,9 +758,9 @@ end
 #=
 Each nonzero `A[i, j]` is recovered from a single coefficient of `Bc` or of `Br`, depending on
 whether the hub of its star in the augmented graph is the column vertex `j` or the row vertex `i + n`.
-The constructor sorts `A_indices` so that the coefficients read from `Bc` come first (in increasing
-order of their position in `nonzeros(A)`) and those read from `Br` come last (in decreasing order),
-which lets the dense method below traverse the pattern of `A` with two merged pointers.
+The constructor therefore splits the nonzeros of `A` into two groups, each described by its own
+pair of index vectors. Both `A_indices_bc` and `A_indices_br` are increasing and together they
+partition `1:nnz(A)`, which lets the dense method below merge them in a single traversal.
 =#
 
 function decompress!(
@@ -769,21 +769,21 @@ function decompress!(
     Bc::AbstractMatrix,
     result::StarSetBicoloringResult,
 )
-    (; S, A_indices, compressed_indices, pos_Bc) = result
+    (; S, A_indices_bc, compressed_indices_bc, compressed_indices_br) = result
     fill!(A, zero(eltype(A)))
-    nnzA = nnz(S)
     rvS = rowvals(S)
-    ind_Bc = 1
-    ind_Br = nnzA
+    nb_bc = length(A_indices_bc)
+    ind_bc = 1
+    ind_br = 1
     for j in axes(S, 2)
         for k in nzrange(S, j)
             i = rvS[k]
-            if ind_Bc <= pos_Bc && A_indices[ind_Bc] == k
-                A[i, j] = Bc[compressed_indices[ind_Bc]]
-                ind_Bc += 1
+            if ind_bc <= nb_bc && A_indices_bc[ind_bc] == k
+                A[i, j] = Bc[compressed_indices_bc[ind_bc]]
+                ind_bc += 1
             else
-                A[i, j] = Br[compressed_indices[ind_Br]]
-                ind_Br -= 1
+                A[i, j] = Br[compressed_indices_br[ind_br]]
+                ind_br += 1
             end
         end
     end
@@ -796,13 +796,13 @@ function decompress!(
     Bc::AbstractMatrix,
     result::StarSetBicoloringResult,
 )
-    (; S, A_indices, compressed_indices, pos_Bc) = result
+    (; A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br) = result
     nzA = nonzeros(A)
-    for t in 1:pos_Bc
-        nzA[A_indices[t]] = Bc[compressed_indices[t]]
+    for t in eachindex(A_indices_bc)
+        nzA[A_indices_bc[t]] = Bc[compressed_indices_bc[t]]
     end
-    for t in (pos_Bc + 1):nnz(S)
-        nzA[A_indices[t]] = Br[compressed_indices[t]]
+    for t in eachindex(A_indices_br)
+        nzA[A_indices_br[t]] = Br[compressed_indices_br[t]]
     end
     return A
 end

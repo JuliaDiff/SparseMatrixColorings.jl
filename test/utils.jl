@@ -207,6 +207,7 @@ function test_bicoloring_decompression(
     problem::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{decompression};
     test_fast=false,
+    gpu=false,
 ) where {decompression}
     @testset "$(typeof(A))" for A in matrix_versions(A0)
         yield()
@@ -241,6 +242,10 @@ function test_bicoloring_decompression(
             ) ≈ A0
         end
 
+        if gpu
+            continue
+        end
+
         if decompression == :direct
             @testset "Recoverability" begin
                 @test structurally_biorthogonal(A0, row_color, column_color)
@@ -255,6 +260,10 @@ function test_bicoloring_decompression(
                 )
             end
         end
+    end
+
+    if gpu
+        return nothing
     end
 
     @testset "More orders is better" begin
