@@ -734,13 +734,6 @@ function StarSetBicoloringResult(
     )
 end
 
-#=
-Return `(A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br)` for a direct
-bidirectional decompression where the nonzero coefficients of `A` are stored in CSC order.
-They satisfy `nonzeros(A)[A_indices_bc[t]] = vec(Bc)[compressed_indices_bc[t]]` and
-`nonzeros(A)[A_indices_br[t]] = vec(Br)[compressed_indices_br[t]]`.
-`A_indices_bc` and `A_indices_br` are increasing and partition `1:nnz(S)`.
-=#
 function star_bicoloring_csc_indices(
     S::SparsityPatternCSC{T},
     symmetric_color::Vector{<:Integer},
@@ -753,13 +746,24 @@ function star_bicoloring_csc_indices(
     (; star, hub) = star_set
     rvS = rowvals(S)
     nnzA = nnz(S)
-    A_indices_bc = Vector{T}(undef, nnzA)
-    compressed_indices_bc = Vector{T}(undef, nnzA)
-    A_indices_br = Vector{T}(undef, nnzA)
-    compressed_indices_br = Vector{T}(undef, nnzA)
 
     nb_bc = 0
-    nb_br = 0
+    for j in 1:n
+        for k in nzrange(S, j)
+            if abs(hub[star[k]]) == j
+                nb_bc += 1
+            end
+        end
+    end
+    nb_br = nnzA - nb_bc
+
+    A_indices_bc = Vector{T}(undef, nb_bc)
+    compressed_indices_bc = Vector{T}(undef, nb_bc)
+    A_indices_br = Vector{T}(undef, nb_br)
+    compressed_indices_br = Vector{T}(undef, nb_br)
+
+    pos_bc = 0
+    pos_br = 0
     for j in 1:n
         for k in nzrange(S, j)
             i = rvS[k]
@@ -770,34 +774,23 @@ function star_bicoloring_csc_indices(
                 # j is the hub and (i + n) is the spoke
                 c = symmetric_color[j]
                 # A[i, j] = Bc[i, symmetric_to_column[c]]
-                nb_bc += 1
-                A_indices_bc[nb_bc] = k
-                compressed_indices_bc[nb_bc] = (symmetric_to_column[c] - 1) * m + i
+                pos_bc += 1
+                A_indices_bc[pos_bc] = k
+                compressed_indices_bc[pos_bc] = (symmetric_to_column[c] - 1) * m + i
             else  # i + n == h
                 # (i + n) is the hub and j is the spoke
                 c = symmetric_color[i + n]
                 # A[i, j] = Br[symmetric_to_row[c], j]
-                nb_br += 1
-                A_indices_br[nb_br] = k
-                compressed_indices_br[nb_br] =
+                pos_br += 1
+                A_indices_br[pos_br] = k
+                compressed_indices_br[pos_br] =
                     (j - 1) * num_row_colors + symmetric_to_row[c]
             end
         end
     end
-    resize!(A_indices_bc, nb_bc)
-    resize!(compressed_indices_bc, nb_bc)
-    resize!(A_indices_br, nb_br)
-    resize!(compressed_indices_br, nb_br)
     return A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br
 end
 
-#=
-Same as `star_bicoloring_csc_indices`, except that `A_indices` refers to the nonzero coefficients
-of `A` stored in CSR order.
-The columns `n+1:n+m` of the augmented adjacency graph hold `Aᵀ` in CSC order, which is exactly
-`A` in CSR order, and `edge_indices(ag)` maps each of those positions back to the CSC position of
-the same coefficient.
-=#
 function star_bicoloring_csr_indices(
     ag::AdjacencyGraph{T},
     S::SparsityPatternCSC{T},
@@ -813,13 +806,24 @@ function star_bicoloring_csr_indices(
     edge_to_index = edge_indices(ag)
     rv_aug = rowvals(S_aug)
     nnzA = nnz(S)
-    A_indices_bc = Vector{T}(undef, nnzA)
-    compressed_indices_bc = Vector{T}(undef, nnzA)
-    A_indices_br = Vector{T}(undef, nnzA)
-    compressed_indices_br = Vector{T}(undef, nnzA)
 
     nb_bc = 0
-    nb_br = 0
+    for i in 1:m
+        for t in nzrange(S_aug, n + i)
+            if abs(hub[star[edge_to_index[t]]]) == rv_aug[t]
+                nb_bc += 1
+            end
+        end
+    end
+    nb_br = nnzA - nb_bc
+
+    A_indices_bc = Vector{T}(undef, nb_bc)
+    compressed_indices_bc = Vector{T}(undef, nb_bc)
+    A_indices_br = Vector{T}(undef, nb_br)
+    compressed_indices_br = Vector{T}(undef, nb_br)
+
+    pos_bc = 0
+    pos_br = 0
     for i in 1:m
         for t in nzrange(S_aug, n + i)
             j = rv_aug[t]
@@ -831,24 +835,20 @@ function star_bicoloring_csr_indices(
                 # j is the hub and (i + n) is the spoke
                 c = symmetric_color[j]
                 # A[i, j] = Bc[i, symmetric_to_column[c]]
-                nb_bc += 1
-                A_indices_bc[nb_bc] = csr_position
-                compressed_indices_bc[nb_bc] = (symmetric_to_column[c] - 1) * m + i
+                pos_bc += 1
+                A_indices_bc[pos_bc] = csr_position
+                compressed_indices_bc[pos_bc] = (symmetric_to_column[c] - 1) * m + i
             else  # i + n == h
                 # (i + n) is the hub and j is the spoke
                 c = symmetric_color[i + n]
                 # A[i, j] = Br[symmetric_to_row[c], j]
-                nb_br += 1
-                A_indices_br[nb_br] = csr_position
-                compressed_indices_br[nb_br] =
+                pos_br += 1
+                A_indices_br[pos_br] = csr_position
+                compressed_indices_br[pos_br] =
                     (j - 1) * num_row_colors + symmetric_to_row[c]
             end
         end
     end
-    resize!(A_indices_bc, nb_bc)
-    resize!(compressed_indices_bc, nb_bc)
-    resize!(A_indices_br, nb_br)
-    resize!(compressed_indices_br, nb_br)
     return A_indices_bc, compressed_indices_bc, A_indices_br, compressed_indices_br
 end
 

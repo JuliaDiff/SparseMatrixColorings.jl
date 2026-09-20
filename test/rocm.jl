@@ -61,6 +61,20 @@ end;
     end
 end;
 
+@testset verbose = true "Symmetric decompression by substitution is unsupported" begin
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:substitution)
+    @testset for T in (ROCSparseMatrixCSC, ROCSparseMatrixCSR)
+        A0 = T(sparse(Symmetric(sprand(rng, 20, 20, 0.3))))
+        result = coloring(A0, problem, algo)
+        B = compress(A0, result)
+        @test_throws SMC.UnsupportedDecompressionError decompress!(similar(A0), B, result)
+        @test_throws SMC.UnsupportedDecompressionError decompress!(
+            similar(A0), B, result, :F
+        )
+    end
+end;
+
 @testset verbose = true "Bidirectional coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct)
