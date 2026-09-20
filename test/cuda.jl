@@ -60,3 +60,41 @@ end;
         )
     end
 end;
+
+@testset verbose = true "Symmetric decompression by substitution is unsupported" begin
+    problem = ColoringProblem(; structure=:symmetric, partition=:column)
+    algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:substitution)
+    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
+        A0 = T(sparse(Symmetric(sprand(rng, 20, 20, 0.3))))
+        result = coloring(A0, problem, algo)
+        B = compress(A0, result)
+        @test_throws SMC.UnsupportedDecompressionError decompress!(similar(A0), B, result)
+        @test_throws SMC.UnsupportedDecompressionError decompress!(
+            similar(A0), B, result, :F
+        )
+    end
+end;
+
+@testset verbose = true "Bidirectional coloring & direct decompression" begin
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+    algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:direct)
+    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
+        @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
+            A0 = T(sprand(rng, m, n, p))
+            test_bicoloring_decompression(A0, problem, algo; gpu=true)
+        end
+    end
+end;
+
+@testset verbose = true "Bidirectional decompression by substitution is unsupported" begin
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+    algo = GreedyColoringAlgorithm(; postprocessing=false, decompression=:substitution)
+    @testset for T in (CuSparseMatrixCSC, CuSparseMatrixCSR)
+        A0 = T(sprand(rng, 20, 10, 0.3))
+        result = coloring(A0, problem, algo)
+        Br, Bc = compress(A0, result)
+        @test_throws SMC.UnsupportedDecompressionError decompress!(
+            similar(A0), Br, Bc, result
+        )
+    end
+end;
