@@ -69,12 +69,13 @@ It is passed as an argument to the main function [`coloring`](@ref).
 
 # Constructors
 
-    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors)
-    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression=:direct)
+    GreedyColoringAlgorithm{decompression}(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, recoloring_iterations=0)
+    GreedyColoringAlgorithm(order=NaturalOrder(); postprocessing=false, postprocessing_minimizes=:all_colors, decompression=:direct, recoloring_iterations=0)
 
 - `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
 - `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices. This option does not affect row or column colorings.
 - `postprocessing_minimizes::Symbol`: which number of distinct colors is heuristically minimized by postprocessing, either `:all_colors`, `:row_colors` or `:column_colors`. This option only affects bidirectional colorings.
+- `recoloring_iterations::Integer`: number of passes of Culberson's iterated greedy recoloring applied to the coloring of each order (see `SparseMatrixColorings.iterated_greedy_recoloring!`). Each pass costs about as much as the initial greedy coloring and never increases the number of colors. This option only affects row and column colorings.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
 !!! warning
@@ -100,20 +101,25 @@ struct GreedyColoringAlgorithm{decompression,N,O<:NTuple{N,AbstractOrder}} <:
     orders::O
     postprocessing::Bool
     postprocessing_minimizes::Symbol
+    recoloring_iterations::Int
 
     function GreedyColoringAlgorithm{decompression}(
         order_or_orders::Union{AbstractOrder,Tuple}=NaturalOrder();
         postprocessing::Bool=false,
         postprocessing_minimizes::Symbol=:all_colors,
+        recoloring_iterations::Integer=0,
     ) where {decompression}
         check_valid_algorithm(decompression)
+        if recoloring_iterations < 0
+            throw(ArgumentError("`recoloring_iterations` must be nonnegative"))
+        end
         if order_or_orders isa AbstractOrder
             orders = (order_or_orders,)
         else
             orders = order_or_orders
         end
         return new{decompression,length(orders),typeof(orders)}(
-            orders, postprocessing, postprocessing_minimizes
+            orders, postprocessing, postprocessing_minimizes, recoloring_iterations
         )
     end
 end
@@ -123,9 +129,10 @@ function GreedyColoringAlgorithm(
     postprocessing::Bool=false,
     decompression::Symbol=:direct,
     postprocessing_minimizes::Symbol=:all_colors,
+    recoloring_iterations::Integer=0,
 )
     return GreedyColoringAlgorithm{decompression}(
-        order_or_orders; postprocessing, postprocessing_minimizes
+        order_or_orders; postprocessing, postprocessing_minimizes, recoloring_iterations
     )
 end
 
@@ -247,7 +254,13 @@ function _coloring(
     bg = BipartiteGraph(A; symmetric_pattern)
     color_by_order = map(algo.orders) do order
         vertices_in_order = vertices(bg, Val(2), order)
-        return partial_distance2_coloring(bg, Val(2), vertices_in_order; forced_colors)
+        _color = partial_distance2_coloring(bg, Val(2), vertices_in_order; forced_colors)
+        if isnothing(forced_colors) && algo.recoloring_iterations > 0
+            iterated_greedy_recoloring!(
+                _color, similar(_color), bg, Val(2), algo.recoloring_iterations
+            )
+        end
+        return _color
     end
     color = argmin(maximum, color_by_order)
     if speed_setting isa WithResult
@@ -270,7 +283,13 @@ function _coloring(
     bg = BipartiteGraph(A; symmetric_pattern)
     color_by_order = map(algo.orders) do order
         vertices_in_order = vertices(bg, Val(1), order)
-        return partial_distance2_coloring(bg, Val(1), vertices_in_order; forced_colors)
+        _color = partial_distance2_coloring(bg, Val(1), vertices_in_order; forced_colors)
+        if isnothing(forced_colors) && algo.recoloring_iterations > 0
+            iterated_greedy_recoloring!(
+                _color, similar(_color), bg, Val(1), algo.recoloring_iterations
+            )
+        end
+        return _color
     end
     color = argmin(maximum, color_by_order)
     if speed_setting isa WithResult

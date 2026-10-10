@@ -240,3 +240,29 @@ end
             ncolors(coloring(A, problem, algo))
     end
 end
+
+@testset "Iterated greedy recoloring" begin
+    rng = StableRNG(0)
+    @test_throws ArgumentError GreedyColoringAlgorithm(; recoloring_iterations=-1)
+    @testset "$partition" for partition in (:column, :row)
+        problem = ColoringProblem(; structure=:nonsymmetric, partition)
+        algo = GreedyColoringAlgorithm()
+        @testset "$((; m, n, p))" for (m, n, p) in ((100, 200, 0.02), (300, 300, 0.01))
+            A = sprand(rng, Bool, m, n, p)
+            k0 = ncolors(coloring(A, problem, algo))
+            k = map((1, 10, 50)) do recoloring_iterations
+                return ncolors(
+                    coloring(A, problem, GreedyColoringAlgorithm(; recoloring_iterations))
+                )
+            end
+            # a pass never increases the number of colors
+            @test k0 >= k[1] >= k[2] >= k[3]
+        end
+    end
+    # random pattern for which the recoloring helps
+    A = sprand(StableRNG(0), Bool, 2000, 2000, 0.003)
+    problem = ColoringProblem()
+    k0 = ncolors(coloring(A, problem, GreedyColoringAlgorithm()))
+    k = ncolors(coloring(A, problem, GreedyColoringAlgorithm(; recoloring_iterations=50)))
+    @test k < k0
+end
