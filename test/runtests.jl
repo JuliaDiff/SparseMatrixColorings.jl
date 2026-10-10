@@ -61,6 +61,9 @@ using Colors: Colors
             @testset "Constant coloring" begin
                 include("constant.jl")
             end
+            @testset "Quotient coloring" begin
+                include("quotient.jl")
+            end
             @testset "Optimal coloring" begin
                 include("optimal.jl")
             end

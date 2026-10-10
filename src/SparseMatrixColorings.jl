@@ -52,6 +52,7 @@ include("result.jl")
 include("matrices.jl")
 include("interface.jl")
 include("constant.jl")
+include("quotient.jl")
 include("adtypes.jl")
 include("decompression.jl")
 include("check.jl")
@@ -66,6 +67,7 @@ export DynamicDegreeBasedOrder, SmallestLast, IncidenceDegree, DynamicLargestFir
 export PerfectEliminationOrder
 export ColoringProblem, GreedyColoringAlgorithm, AbstractColoringResult
 export ConstantColoringAlgorithm
+export QuotientColoringAlgorithm
 export OptimalColoringAlgorithm
 export coloring, fast_coloring
 export column_colors, row_colors, ncolors
