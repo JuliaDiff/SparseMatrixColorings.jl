@@ -26,6 +26,8 @@ end
     @testset "ADTypes" begin
         @test_opt column_coloring(A, GreedyColoringAlgorithm())
         @test_opt row_coloring(A, GreedyColoringAlgorithm())
+        @test_opt column_coloring(A, GreedyColoringAlgorithm(; recoloring_iterations=5))
+        @test_opt row_coloring(A, GreedyColoringAlgorithm(; recoloring_iterations=5))
         @test_opt symmetric_coloring(Symmetric(A), GreedyColoringAlgorithm())
 
         @inferred column_coloring(A, GreedyColoringAlgorithm())
