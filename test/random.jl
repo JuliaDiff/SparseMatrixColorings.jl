@@ -49,6 +49,18 @@ end;
     end
 end;
 
+@testset "Column and row coloring with recoloring & decompression" begin
+    algo = GreedyColoringAlgorithm(; decompression=:direct, recoloring_iterations=10)
+    @testset "$partition" for partition in (:column, :row)
+        problem = ColoringProblem(; structure=:nonsymmetric, partition)
+        @testset "$((; m, n, p))" for (m, n, p) in asymmetric_params
+            # separate RNG to keep the instances of the other test sets
+            A0 = sprand(StableRNG(m + n), m, n, p)
+            test_coloring_decompression(A0, problem, algo)
+        end
+    end
+end;
+
 @testset "Symmetric coloring & direct decompression" begin
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     @testset for algo in (

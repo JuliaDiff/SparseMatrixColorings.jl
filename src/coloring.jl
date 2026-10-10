@@ -79,6 +79,66 @@ function partial_distance2_coloring!(
 end
 
 """
+    iterated_greedy_recoloring!(
+        color::AbstractVector{<:Integer},
+        forbidden_colors::AbstractVector{<:Integer},
+        bg::BipartiteGraph,
+        ::Val{side},
+        iterations::Integer,
+    )
+
+Improve the distance-2 coloring `color` of the given `side` (`1` or `2`) in the bipartite graph `bg` in-place, with `iterations` passes of Culberson's iterated greedy algorithm.
+
+Each pass recolors the vertices greedily as in [`partial_distance2_coloring`](@ref), in an order where the vertices of each color class are consecutive.
+Since the vertices of a color class are independent, such a pass never increases the number of colors.
+The color classes are ordered by decreasing color in odd passes, and by decreasing size in even passes.
+
+# References
+
+> [_Iterated Greedy Graph Coloring_](https://doi.org/10.1090/dimacs/026/12), Culberson and Luo (1996)
+"""
+function iterated_greedy_recoloring!(
+    color::AbstractVector{<:Integer},
+    forbidden_colors::AbstractVector{<:Integer},
+    bg::BipartiteGraph{T},
+    ::Val{side},
+    iterations::Integer,
+) where {T,side}
+    n = length(color)
+    vertices_in_order = Vector{T}(undef, n)
+    class_size = Vector{T}(undef, n)
+    class_start = Vector{T}(undef, n)
+    for iteration in 1:iterations
+        k = maximum(color; init=zero(eltype(color)))
+        # order of the color classes
+        class_size[1:k] .= 0
+        for v in eachindex(color)
+            class_size[color[v]] += 1
+        end
+        classes = if isodd(iteration)
+            k:-1:1
+        else
+            sortperm(view(class_size, 1:k); rev=true)
+        end
+        # vertices sorted by class, in the order of the classes (counting sort)
+        position = 1
+        for c in classes
+            class_start[c] = position
+            position += class_size[c]
+        end
+        for v in eachindex(color)
+            c = color[v]
+            vertices_in_order[class_start[c]] = v
+            class_start[c] += 1
+        end
+        partial_distance2_coloring!(
+            color, forbidden_colors, bg, Val(side), vertices_in_order
+        )
+    end
+    return color
+end
+
+"""
     star_coloring(
         g::AdjacencyGraph, vertices_in_order::AbstractVector, postprocessing::Bool;
         postprocessing_minimizes::Symbol=:all_colors, forced_colors::Union{AbstractVector,Nothing}=nothing
