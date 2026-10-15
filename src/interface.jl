@@ -75,7 +75,7 @@ It is passed as an argument to the main function [`coloring`](@ref).
 - `order::Union{AbstractOrder,Tuple}`: the order in which the columns or rows are colored, which can impact the number of colors. Can also be a tuple of different orders to try out, from which the best order (the one with the lowest total number of colors) will be used.
 - `postprocessing::Bool`: whether or not the coloring will be refined by assigning the neutral color `0` to some vertices. This option does not affect row or column colorings.
 - `postprocessing_minimizes::Symbol`: which number of distinct colors is heuristically minimized by postprocessing, either `:all_colors`, `:row_colors` or `:column_colors`. This option only affects bidirectional colorings.
-- `recoloring_iterations::Integer`: number of passes of Culberson's iterated greedy recoloring applied to the coloring of each order (see `SparseMatrixColorings.iterated_greedy_recoloring!`). Each pass costs about as much as the initial greedy coloring and never increases the number of colors. This option only affects row and column colorings.
+- `recoloring_iterations::Integer`: number of passes of Culberson's iterated greedy recoloring applied to the coloring of each order. Each pass costs about as much as the initial greedy coloring and never increases the number of colors. This option only affects row and column colorings.
 - `decompression::Symbol`: either `:direct` or `:substitution`. Usually `:substitution` leads to fewer colors, at the cost of a more expensive coloring (and decompression). When `:substitution` is not applicable, it falls back on `:direct` decompression.
 
 !!! warning
