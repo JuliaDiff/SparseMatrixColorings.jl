@@ -24,6 +24,7 @@ SparseMatrixColorings.bidirectional_pattern
 ```@docs
 SparseMatrixColorings.partial_distance2_coloring
 SparseMatrixColorings.iterated_greedy_recoloring!
+SparseMatrixColorings.quotient_pattern
 SparseMatrixColorings.star_coloring
 SparseMatrixColorings.acyclic_coloring
 SparseMatrixColorings.group_by_color
