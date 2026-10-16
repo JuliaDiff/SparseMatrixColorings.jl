@@ -502,13 +502,30 @@ function decompress_single_color!(
     return A
 end
 
-function decompress!(
-    A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
+"""
+    decompress_csc!(
+        nzA::AbstractVector,
+        A_colptr::AbstractVector{<:Integer},
+        B::AbstractMatrix,
+        result::Union{StarSetColoringResult,TreeSetColoringResult},
+        uplo::Symbol=:F,
+    )
+
+Decompress the values of `B` into the vector of nonzero entries `nzA` of a
+sparse matrix with column pointers `A_colptr`, without constructing the matrix.
+The destination pattern must match the full coloring pattern (`uplo=:F`), its
+lower triangle (`uplo=:L`), or its upper triangle (`uplo=:U`), with row indices
+sorted in increasing order within each column. Return `nothing`.
+"""
+function decompress_csc!(
+    nzA::AbstractVector,
+    A_colptr::AbstractVector{<:Integer},
+    B::AbstractMatrix,
+    result::StarSetColoringResult,
+    uplo::Symbol=:F,
 )
     (; ag, compressed_indices) = result
     (; S) = ag
-    nzA = nonzeros(A)
-    check_compatible_pattern(A, ag, uplo)
     if uplo == :F
         for k in eachindex(nzA, compressed_indices)
             nzA[k] = B[compressed_indices[k]]
@@ -526,6 +543,14 @@ function decompress!(
             end
         end
     end
+    return nothing
+end
+
+function decompress!(
+    A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult, uplo::Symbol=:F
+)
+    check_compatible_pattern(A, result.ag, uplo)
+    decompress_csc!(nonzeros(A), A.colptr, B, result, uplo)
     return A
 end
 
@@ -585,20 +610,6 @@ function decompress!(
     return A
 end
 
-"""
-   decompress_csc!(
-        nzA::AbstractVector{R},
-        A_colptr::AbstractVector,
-        B::AbstractMatrix{R},
-        result::TreeSetColoringResult,
-        uplo::Symbol=:F,
-    ) where {R<:Real}
-
-Decompress the values of `B` into the vector of nonzero entries `nzA` of a
-sparse matrix with column pointers `colptr`. This function assumes that the
-row indices are sorted in increasing order and are the same as those of the
-sparse matrix given to the `coloring` function that returned `result`.
-"""
 function decompress_csc!(
     nzA::AbstractVector{R},
     A_colptr::AbstractVector{<:Integer},
