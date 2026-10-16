@@ -60,6 +60,25 @@ function ColoringProblem(; structure::Symbol=:nonsymmetric, partition::Symbol=:c
     return ColoringProblem{structure,partition}()
 end
 
+function check_valid_decompression_uplo(
+    ::ColoringProblem{structure}, decompression_uplo::Symbol
+) where {structure}
+    if !(decompression_uplo in (:F, :L, :U))
+        throw(
+            ArgumentError(
+                "The setting `decompression_uplo=$(repr(decompression_uplo))` is not supported by `coloring`, it must be `:F`, `:L` or `:U`.",
+            ),
+        )
+    end
+    if decompression_uplo != :F && structure != :symmetric
+        throw(
+            ArgumentError(
+                "The setting `decompression_uplo=$(repr(decompression_uplo))` is only supported for `structure=:symmetric`, not `structure=$(repr(structure))`.",
+            ),
+        )
+    end
+end
+
 """
     GreedyColoringAlgorithm{decompression} <: ADTypes.AbstractColoringAlgorithm
 
@@ -147,13 +166,16 @@ struct WithoutResult <: WithOrWithoutResult end
         S::AbstractMatrix,
         problem::ColoringProblem,
         algo::GreedyColoringAlgorithm;
-        [decompression_eltype=Float64, symmetric_pattern=false]
+        [decompression_eltype=Float64, decompression_uplo=:F, symmetric_pattern=false]
     )
 
 Solve a [`ColoringProblem`](@ref) on the matrix `S` with a [`GreedyColoringAlgorithm`](@ref) and return an [`AbstractColoringResult`](@ref).
 
 The result can be used to [`compress`](@ref) and [`decompress`](@ref) a matrix `A` with the same sparsity pattern as `S`.
 If `eltype(A) == decompression_eltype`, decompression might be faster.
+
+For a `:symmetric` problem (and only then), `decompression_uplo` selects which part of `A` the decompression fills in: `:F` for the full matrix, `:L` for its lower triangle or `:U` for its upper triangle.
+Since it is fixed once and for all in the result, it is not passed at decompression time: build one result per triangle if you need several.
 
 For a `:nonsymmetric` problem (and only then), setting `symmetric_pattern=true` indicates that the pattern of nonzeros is symmetric.
 This condition is weaker than the symmetry of actual values, so it can happen for some Jacobians.
@@ -206,10 +228,18 @@ function coloring(
     problem::ColoringProblem,
     algo::GreedyColoringAlgorithm;
     decompression_eltype::Type=Float64,
+    decompression_uplo::Symbol=:F,
     symmetric_pattern::Bool=false,
 )
+    check_valid_decompression_uplo(problem, decompression_uplo)
     return _coloring(
-        WithResult(), A, problem, algo, decompression_eltype, symmetric_pattern
+        WithResult(),
+        A,
+        problem,
+        algo,
+        decompression_eltype,
+        decompression_uplo,
+        symmetric_pattern,
     )
 end
 
@@ -238,7 +268,7 @@ function fast_coloring(
     algo::GreedyColoringAlgorithm;
     symmetric_pattern::Bool=false,
 )
-    return _coloring(WithoutResult(), A, problem, algo, Float64, symmetric_pattern)
+    return _coloring(WithoutResult(), A, problem, algo, Float64, :F, symmetric_pattern)
 end
 
 function _coloring(
@@ -247,6 +277,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:column},
     algo::GreedyColoringAlgorithm,
     decompression_eltype::Type,
+    decompression_uplo::Symbol,
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
@@ -276,6 +307,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:row},
     algo::GreedyColoringAlgorithm,
     decompression_eltype::Type,
+    decompression_uplo::Symbol,
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
@@ -305,6 +337,7 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type,
+    decompression_uplo::Symbol,
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 )
@@ -315,7 +348,7 @@ function _coloring(
     end
     color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
     if speed_setting isa WithResult
-        return StarSetColoringResult(A, ag, color, star_set)
+        return StarSetColoringResult(A, ag, color, star_set, decompression_uplo)
     else
         return color
     end
@@ -327,6 +360,7 @@ function _coloring(
     ::ColoringProblem{:symmetric,:column},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
+    decompression_uplo::Symbol,
     symmetric_pattern::Bool,
 ) where {R}
     ag = AdjacencyGraph(A; augmented_graph=false, original_size=size(A))
@@ -342,7 +376,7 @@ function _coloring(
         color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
     end
     if speed_setting isa WithResult
-        return TreeSetColoringResult(A, ag, color, tree_set, R)
+        return TreeSetColoringResult(A, ag, color, tree_set, R, decompression_uplo)
     else
         return color
     end
@@ -354,6 +388,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:direct},
     decompression_eltype::Type{R},
+    decompression_uplo::Symbol,
     symmetric_pattern::Bool;
     forced_colors::Union{AbstractVector{<:Integer},Nothing}=nothing,
 ) where {R}
@@ -409,6 +444,7 @@ function _coloring(
     ::ColoringProblem{:nonsymmetric,:bidirectional},
     algo::GreedyColoringAlgorithm{:substitution},
     decompression_eltype::Type{R},
+    decompression_uplo::Symbol,
     symmetric_pattern::Bool,
 ) where {R}
     S, A_and_Aᵀ, edge_to_index = bidirectional_pattern(A; symmetric_pattern)

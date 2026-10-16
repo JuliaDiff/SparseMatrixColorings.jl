@@ -3,6 +3,7 @@ using BandedMatrices: BandedMatrix
 using Base: promote_eltype
 using BlockBandedMatrices: BlockBandedMatrix
 using LinearAlgebra
+using SparseArrays: SparseMatrixCSC, nnz
 using SparseMatrixColorings
 using SparseMatrixColorings:
     AdjacencyGraph,
@@ -76,6 +77,25 @@ function test_coloring_decompression(
         end
 
         if gpu
+            @testset "Triangle decompression" begin
+                if structure == :symmetric
+                    A0_cpu = SparseMatrixCSC(A0)
+                    for (decompression_uplo, triangle) in ((:L, tril), (:U, triu))
+                        result_T = coloring(A, problem, algo; decompression_uplo)
+                        @test column_colors(result_T) == color
+                        A3 = decompress(B, result_T)
+                        @test SparseMatrixCSC(A3) ≈ triangle(A0_cpu)
+                        A3.nzVal .= zero(eltype(A3))
+                        decompress!(A3, B, result_T)
+                        @test SparseMatrixCSC(A3) ≈ triangle(A0_cpu)
+                        if nnz(triangle(A0_cpu)) != nnz(A0_cpu)
+                            @test_throws DimensionMismatch decompress!(
+                                respectful_similar(A, eltype(B)), B, result_T
+                            )
+                        end
+                    end
+                end
+            end
             continue
         end
 
@@ -124,8 +144,20 @@ function test_coloring_decompression(
             end
         end
 
+        # The triangle is now fixed at coloring time, so one result decompresses
+        # into exactly one triangle: we need a sibling result per triangle.
+        if structure == :symmetric
+            result_L = coloring(A, problem, algo; decompression_uplo=:L)
+            result_U = coloring(A, problem, algo; decompression_uplo=:U)
+        end
+
         @testset "Triangle decompression" begin
             if structure == :symmetric
+                # the three problems must agree on the colors, otherwise the single `B`
+                # computed above would not be valid for the sibling results
+                @test column_colors(result_L) == color
+                @test column_colors(result_U) == color
+
                 A3upper = respectful_similar(triu(A), eltype(B))
                 A3lower = respectful_similar(tril(A), eltype(B))
                 A3both = respectful_similar(A, eltype(B))
@@ -133,13 +165,17 @@ function test_coloring_decompression(
                 A3lower .= zero(eltype(A))
                 A3both .= zero(eltype(A))
 
-                decompress!(A3upper, B, result, :U)
-                decompress!(A3lower, B, result, :L)
-                decompress!(A3both, B, result, :F)
+                decompress!(A3upper, B, result_U)
+                decompress!(A3lower, B, result_L)
+                decompress!(A3both, B, result)
 
                 @test A3upper ≈ triu(A0)
                 @test A3lower ≈ tril(A0)
                 @test A3both ≈ A0
+
+                # out-of-place must allocate a target with the right triangular pattern
+                @test decompress(B, result_U) ≈ triu(A0)
+                @test decompress(B, result_L) ≈ tril(A0)
             end
         end
 
@@ -154,9 +190,9 @@ function test_coloring_decompression(
 
                 for c in unique(color)
                     c == 0 && continue
-                    decompress_single_color!(A4upper, B[:, c], c, result, :U)
-                    decompress_single_color!(A4lower, B[:, c], c, result, :L)
-                    decompress_single_color!(A4both, B[:, c], c, result, :F)
+                    decompress_single_color!(A4upper, B[:, c], c, result_U)
+                    decompress_single_color!(A4lower, B[:, c], c, result_L)
+                    decompress_single_color!(A4both, B[:, c], c, result)
                 end
 
                 @test A4upper ≈ triu(A0)

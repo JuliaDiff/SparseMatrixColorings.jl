@@ -32,12 +32,14 @@ function SMC.StarSetColoringResult(
     ag::SMC.AdjacencyGraph{T},
     color::Vector{<:Integer},
     star_set::SMC.StarSet{<:Integer},
+    decompression_uplo::Symbol,
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
-    compressed_indices = SMC.star_csc_indices(ag, color, star_set)
+    compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
+    is_hub = SMC.star_is_hub(ag, star_set)
     additional_info = (; compressed_indices_gpu_csc=CuVector(compressed_indices))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, additional_info
+        A, ag, color, group, compressed_indices, is_hub, decompression_uplo, additional_info
     )
 end
 
@@ -112,12 +114,20 @@ function SMC.StarSetColoringResult(
     ag::SMC.AdjacencyGraph{T},
     color::Vector{<:Integer},
     star_set::SMC.StarSet{<:Integer},
+    decompression_uplo::Symbol,
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
-    compressed_indices = SMC.star_csc_indices(ag, color, star_set)
-    additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices))
+    compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
+    is_hub = SMC.star_is_hub(ag, star_set)
+    compressed_indices_csr = if decompression_uplo == :F
+        compressed_indices
+    else
+        opposite_uplo = decompression_uplo == :L ? :U : :L
+        SMC.star_csc_indices(ag, color, star_set, opposite_uplo)
+    end
+    additional_info = (; compressed_indices_gpu_csr=CuVector(compressed_indices_csr))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, additional_info
+        A, ag, color, group, compressed_indices, is_hub, decompression_uplo, additional_info
     )
 end
 
@@ -194,16 +204,9 @@ function SMC.decompress!(
     A::CuSparseMatrixCSC,
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSC},
-    uplo::Symbol=:F,
 )
-    if uplo != :F
-        throw(
-            SMC.UnsupportedDecompressionError(
-                "Single-triangle decompression is not supported on GPU matrices"
-            ),
-        )
-    end
     compressed_indices = result.additional_info.compressed_indices_gpu_csc
+    SMC.check_compatible_pattern(A, result.ag, result.decompression_uplo)
     copyto!(A.nzVal, view(B, compressed_indices))
     return A
 end
@@ -212,16 +215,9 @@ function SMC.decompress!(
     A::CuSparseMatrixCSR,
     B::CuMatrix,
     result::SMC.StarSetColoringResult{<:CuSparseMatrixCSR},
-    uplo::Symbol=:F,
 )
-    if uplo != :F
-        throw(
-            SMC.UnsupportedDecompressionError(
-                "Single-triangle decompression is not supported on GPU matrices"
-            ),
-        )
-    end
     compressed_indices = result.additional_info.compressed_indices_gpu_csr
+    SMC.check_compatible_pattern(A, result.ag, result.decompression_uplo)
     copyto!(A.nzVal, view(B, compressed_indices))
     return A
 end

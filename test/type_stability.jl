@@ -69,6 +69,25 @@ end
         end
     end
 
+    @testset "Triangle decompression_uplo" begin
+        @testset "$decompression - $uplo" for decompression in (:direct, :substitution),
+            uplo in (:L, :U)
+
+            @test_opt coloring(
+                A,
+                ColoringProblem(; structure=:symmetric, partition=:column),
+                GreedyColoringAlgorithm(; decompression);
+                decompression_uplo=uplo,
+            )
+            @inferred coloring(
+                A,
+                ColoringProblem(; structure=:symmetric, partition=:column),
+                GreedyColoringAlgorithm(; decompression);
+                decompression_uplo=uplo,
+            )
+        end
+    end
+
     @testset "Explicit decompression_eltype" begin
         @testset "$structure - $partition - $decompression - $R" for (
                 structure, partition, decompression
@@ -179,13 +198,27 @@ end;
                 end
                 @testset "Triangle decompression" begin
                     if structure == :symmetric
-                        @test_opt decompress!(respectful_similar(triu(A)), B, result, :U)
+                        result_U = coloring(
+                            A0,
+                            ColoringProblem{structure,partition}(),
+                            GreedyColoringAlgorithm(; decompression);
+                            decompression_eltype=eltype(A),
+                            decompression_uplo=:U,
+                        )
+                        @test_opt decompress!(respectful_similar(triu(A)), B, result_U)
                     end
                 end
                 @testset "Single-color triangle decompression" begin
                     if structure == :symmetric && decompression == :direct
+                        result_U = coloring(
+                            A0,
+                            ColoringProblem{structure,partition}(),
+                            GreedyColoringAlgorithm(; decompression);
+                            decompression_eltype=eltype(A),
+                            decompression_uplo=:U,
+                        )
                         @test_opt decompress_single_color!(
-                            respectful_similar(triu(A)), B[:, 1], 1, result, :U
+                            respectful_similar(triu(A)), B[:, 1], 1, result_U
                         )
                     end
                 end

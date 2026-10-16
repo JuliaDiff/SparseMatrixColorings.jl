@@ -211,6 +211,16 @@ and its columnwise compression
 B_img # hide
 ```
 
+#### Recovering a single triangle
+
+Since a symmetric matrix is redundant, you can ask for only one of its triangles with the `decompression_uplo` keyword of [`coloring`](@ref) (`:F` for the full matrix, `:L` for its lower triangle or `:U` for its upper triangle).
+The choice is made once, at coloring time, and the decompression then fills in that triangle only:
+
+```@example tutorial
+result_U = coloring(S, problem, algo; decompression_uplo=:U)
+decompress(compress(S, result_U), result_U)
+```
+
 ### Acyclic coloring
 
 Acyclic coloring is the algorithm used for symmetric matrices with decompression by substitution.
