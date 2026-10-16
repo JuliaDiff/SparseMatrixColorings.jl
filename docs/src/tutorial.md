@@ -221,8 +221,6 @@ result_U = coloring(S, problem, algo; decompression_uplo=:U)
 decompress(compress(S, result_U), result_U)
 ```
 
-A given result decompresses into exactly one triangle, so build one result per triangle if you need several.
-
 ### Acyclic coloring
 
 Acyclic coloring is the algorithm used for symmetric matrices with decompression by substitution.
