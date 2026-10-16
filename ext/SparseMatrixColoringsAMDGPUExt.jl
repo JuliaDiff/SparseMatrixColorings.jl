@@ -36,9 +36,10 @@ function SMC.StarSetColoringResult(
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
+    is_hub = SMC.star_is_hub(ag, star_set)
     additional_info = (; compressed_indices_gpu_csc=ROCVector(compressed_indices))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, decompression_uplo, additional_info
+        A, ag, color, group, compressed_indices, is_hub, decompression_uplo, additional_info
     )
 end
 
@@ -117,6 +118,7 @@ function SMC.StarSetColoringResult(
 ) where {T<:Integer}
     group = SMC.group_by_color(T, color)
     compressed_indices = SMC.star_csc_indices(ag, color, star_set, decompression_uplo)
+    is_hub = SMC.star_is_hub(ag, star_set)
     compressed_indices_csr = if decompression_uplo == :F
         compressed_indices
     else
@@ -125,7 +127,7 @@ function SMC.StarSetColoringResult(
     end
     additional_info = (; compressed_indices_gpu_csr=ROCVector(compressed_indices_csr))
     return SMC.StarSetColoringResult(
-        A, ag, color, group, compressed_indices, decompression_uplo, additional_info
+        A, ag, color, group, compressed_indices, is_hub, decompression_uplo, additional_info
     )
 end
 

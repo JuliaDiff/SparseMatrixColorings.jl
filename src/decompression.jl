@@ -479,40 +479,27 @@ end
 function decompress_single_color!(
     A::AbstractMatrix, b::AbstractVector, c::Integer, result::StarSetColoringResult
 )
-    (; ag, compressed_indices, group, decompression_uplo) = result
+    (; ag, group, is_hub, decompression_uplo) = result
     (; S) = ag
     check_compatible_pattern(A, ag, decompression_uplo)
 
-    lower_index = (c - 1) * S.n + 1
-    upper_index = c * S.n
     rvS = rowvals(S)
-    if decompression_uplo == :F
-        for j in group[c]
-            for k in nzrange(S, j)
-                # Check if the color c is used to recover A[i,j] / A[j,i]
-                if lower_index <= compressed_indices[k] <= upper_index
-                    i = rvS[k]
-                    if i == j
-                        # Recover the diagonal coefficients of A
-                        A[i, i] = b[i]
-                    else
-                        # Recover the off-diagonal coefficients of A
+    for j in group[c]
+        for k in nzrange(S, j)
+            # Check if the color c is used to recover A[i,j] / A[j,i]
+            if is_hub[k]
+                i = rvS[k]
+                if i == j
+                    # Recover the diagonal coefficients of A
+                    A[i, i] = b[i]
+                else
+                    # Recover the off-diagonal coefficients of A
+                    if in_triangle(i, j, decompression_uplo)
                         A[i, j] = b[i]
+                    end
+                    if in_triangle(j, i, decompression_uplo)
                         A[j, i] = b[i]
                     end
-                end
-            end
-        end
-    else
-        l = 0
-        for j in axes(S, 2)
-            for k in nzrange(S, j)
-                i = rvS[k]
-                in_triangle(i, j, decompression_uplo) || continue
-                l += 1
-                index = compressed_indices[l]
-                if lower_index <= index <= upper_index
-                    A[i, j] = b[index - lower_index + 1]
                 end
             end
         end
@@ -523,36 +510,30 @@ end
 function decompress_single_color!(
     A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::StarSetColoringResult
 )
-    (; ag, compressed_indices, group, decompression_uplo) = result
+    (; ag, group, is_hub, decompression_uplo) = result
     (; S) = ag
     check_compatible_pattern(A, ag, decompression_uplo)
 
-    lower_index = (c - 1) * S.n + 1
-    upper_index = c * S.n
     rvS = rowvals(S)
     rvA = rowvals(A)
     nzA = nonzeros(A)
     for j in group[c]
         for k in nzrange(S, j)
-            i = rvS[k]
-            if in_triangle(i, j, decompression_uplo)
-                p = if decompression_uplo == :L
-                    A.colptr[j + 1] - (S.colptr[j + 1] - k)
-                else
-                    A.colptr[j] + (k - S.colptr[j])
+            if is_hub[k]
+                i = rvS[k]
+                if in_triangle(i, j, decompression_uplo)
+                    p = if decompression_uplo == :L
+                        A.colptr[j + 1] - (S.colptr[j + 1] - k)
+                    else
+                        A.colptr[j] + (k - S.colptr[j])
+                    end
+                    nzA[p] = b[i]
                 end
-                index = compressed_indices[p]
-                if lower_index <= index <= upper_index
-                    nzA[p] = b[index - lower_index + 1]
-                end
-            end
-            if i != j && in_triangle(j, i, decompression_uplo)
-                p = searchsortedfirst(
-                    rvA, j, A.colptr[i], A.colptr[i + 1] - 1, Base.Order.Forward
-                )
-                index = compressed_indices[p]
-                if lower_index <= index <= upper_index
-                    nzA[p] = b[index - lower_index + 1]
+                if i != j && in_triangle(j, i, decompression_uplo)
+                    p = searchsortedfirst(
+                        rvA, j, A.colptr[i], A.colptr[i + 1] - 1, Base.Order.Forward
+                    )
+                    nzA[p] = b[i]
                 end
             end
         end

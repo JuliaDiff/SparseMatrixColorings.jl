@@ -312,6 +312,7 @@ struct StarSetColoringResult{
     color::CT
     group::GT
     compressed_indices::VT
+    is_hub::BitVector
     decompression_uplo::Symbol
     additional_info::A
 end
@@ -325,9 +326,28 @@ function StarSetColoringResult(
 ) where {T<:Integer}
     group = group_by_color(T, color)
     compressed_indices = star_csc_indices(ag, color, star_set, decompression_uplo)
+    is_hub = star_is_hub(ag, star_set)
     return StarSetColoringResult(
-        A, ag, color, group, compressed_indices, decompression_uplo, nothing
+        A, ag, color, group, compressed_indices, is_hub, decompression_uplo, nothing
     )
+end
+
+function star_is_hub(ag::AdjacencyGraph, star_set::StarSet{<:Integer})
+    (; star, hub) = star_set
+    S = pattern(ag)
+    edge_to_index = edge_indices(ag)
+    rvS = rowvals(S)
+    is_hub = trues(nnz(S))
+    for j in axes(S, 2)
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if i != j
+                s = star[edge_to_index[k]]
+                is_hub[k] = abs(hub[s]) != i
+            end
+        end
+    end
+    return is_hub
 end
 
 function star_csc_indices(
