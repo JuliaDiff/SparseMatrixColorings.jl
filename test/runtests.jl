@@ -75,6 +75,9 @@ using Colors: Colors
             @testset "Empty matrices" begin
                 include("empty.jl")
             end
+            @testset "CSC decompression" begin
+                include("decompression.jl")
+            end
             @testset "Small instances" begin
                 include("small.jl")
             end
