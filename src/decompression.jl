@@ -530,9 +530,8 @@ function decompress_single_color!(
                     nzA[p] = b[i]
                 end
                 if i != j && in_triangle(j, i, decompression_uplo)
-                    p = searchsortedfirst(
-                        rvA, j, A.colptr[i], A.colptr[i + 1] - 1, Base.Order.Forward
-                    )
+                    r = nzrange(A, i)
+                    p = first(r) - 1 + searchsortedfirst(view(rvA, r), j)
                     nzA[p] = b[i]
                 end
             end
