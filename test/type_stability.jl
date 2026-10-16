@@ -9,6 +9,9 @@ using Test
 
 rng = StableRNG(63)
 
+# from Julia 1.12 on, JET also reports runtime dispatches inside Base
+const JET_TARGET_MODULES = VERSION >= v"1.12" ? (SparseMatrixColorings,) : nothing
+
 # `@inferred` and `@test_opt` build their keyword arguments with `typeof`, which erases
 # `Type{Float64}` down to `DataType`. Passing `decompression_eltype` straight to them would
 # therefore hide the eltype from inference and make every result type unresolvable. Positional
@@ -24,11 +27,21 @@ end
 
     # ADTypes
     @testset "ADTypes" begin
-        @test_opt column_coloring(A, GreedyColoringAlgorithm())
-        @test_opt row_coloring(A, GreedyColoringAlgorithm())
-        @test_opt column_coloring(A, GreedyColoringAlgorithm(; recoloring_iterations=5))
-        @test_opt row_coloring(A, GreedyColoringAlgorithm(; recoloring_iterations=5))
-        @test_opt symmetric_coloring(Symmetric(A), GreedyColoringAlgorithm())
+        @test_opt target_modules = JET_TARGET_MODULES column_coloring(
+            A, GreedyColoringAlgorithm()
+        )
+        @test_opt target_modules = JET_TARGET_MODULES row_coloring(
+            A, GreedyColoringAlgorithm()
+        )
+        @test_opt target_modules = JET_TARGET_MODULES column_coloring(
+            A, GreedyColoringAlgorithm(; recoloring_iterations=5)
+        )
+        @test_opt target_modules = JET_TARGET_MODULES row_coloring(
+            A, GreedyColoringAlgorithm(; recoloring_iterations=5)
+        )
+        @test_opt target_modules = JET_TARGET_MODULES symmetric_coloring(
+            Symmetric(A), GreedyColoringAlgorithm()
+        )
 
         @inferred column_coloring(A, GreedyColoringAlgorithm())
         @inferred row_coloring(A, GreedyColoringAlgorithm())
@@ -46,12 +59,12 @@ end
         (:nonsymmetric, :bidirectional, :substitution),
     ]
         @testset for order in all_orders()
-            @test_opt coloring(
+            @test_opt target_modules = JET_TARGET_MODULES coloring(
                 A,
                 ColoringProblem(; structure, partition),
                 GreedyColoringAlgorithm(order; decompression),
             )
-            @test_opt coloring(
+            @test_opt target_modules = JET_TARGET_MODULES coloring(
                 A,
                 ColoringProblem(; structure, partition),
                 GreedyColoringAlgorithm((NaturalOrder(), order); decompression),
@@ -83,7 +96,7 @@ end
             R in (Float64, Float32)
 
             @testset for order in all_orders()
-                @test_opt coloring_with_eltype(
+                @test_opt target_modules = JET_TARGET_MODULES coloring_with_eltype(
                     A,
                     ColoringProblem(; structure, partition),
                     GreedyColoringAlgorithm(order; decompression),
@@ -111,7 +124,7 @@ end;
         (structure, partition, decompression) in
         [(:nonsymmetric, :column, :direct), (:nonsymmetric, :row, :direct)]
 
-        @test_opt coloring(
+        @test_opt target_modules = JET_TARGET_MODULES coloring(
             A,
             ColoringProblem(; structure, partition),
             GreedyColoringAlgorithm(; decompression),
@@ -148,9 +161,11 @@ end;
             if partition == :bidirectional
                 Br, Bc = compress(A, result)
                 @testset "Full decompression" begin
-                    @test_opt compress(A, result)
-                    @test_opt decompress(Br, Bc, result)
-                    @test_opt decompress!(respectful_similar(A), Br, Bc, result)
+                    @test_opt target_modules = JET_TARGET_MODULES compress(A, result)
+                    @test_opt target_modules = JET_TARGET_MODULES decompress(Br, Bc, result)
+                    @test_opt target_modules = JET_TARGET_MODULES decompress!(
+                        respectful_similar(A), Br, Bc, result
+                    )
 
                     @inferred compress(A, result)
                     @inferred decompress(Br, Bc, result)
@@ -158,9 +173,11 @@ end;
             else
                 B = compress(A, result)
                 @testset "Full decompression" begin
-                    @test_opt compress(A, result)
-                    @test_opt decompress(B, result)
-                    @test_opt decompress!(respectful_similar(A), B, result)
+                    @test_opt target_modules = JET_TARGET_MODULES compress(A, result)
+                    @test_opt target_modules = JET_TARGET_MODULES decompress(B, result)
+                    @test_opt target_modules = JET_TARGET_MODULES decompress!(
+                        respectful_similar(A), B, result
+                    )
 
                     @inferred compress(A, result)
                     @inferred decompress(B, result)
@@ -172,19 +189,21 @@ end;
                         else
                             B[1, :]
                         end
-                        @test_opt decompress_single_color!(
+                        @test_opt target_modules = JET_TARGET_MODULES decompress_single_color!(
                             respectful_similar(A), b, 1, result
                         )
                     end
                 end
                 @testset "Triangle decompression" begin
                     if structure == :symmetric
-                        @test_opt decompress!(respectful_similar(triu(A)), B, result, :U)
+                        @test_opt target_modules = JET_TARGET_MODULES decompress!(
+                            respectful_similar(triu(A)), B, result, :U
+                        )
                     end
                 end
                 @testset "Single-color triangle decompression" begin
                     if structure == :symmetric && decompression == :direct
-                        @test_opt decompress_single_color!(
+                        @test_opt target_modules = JET_TARGET_MODULES decompress_single_color!(
                             respectful_similar(triu(A)), B[:, 1], 1, result, :U
                         )
                     end
@@ -211,7 +230,7 @@ end;
             GreedyColoringAlgorithm(; decompression);
         )
         B = compress(A, result)
-        @test_opt decompress(B, result)
+        @test_opt target_modules = JET_TARGET_MODULES decompress(B, result)
         @inferred decompress(B, result)
     end
 end;

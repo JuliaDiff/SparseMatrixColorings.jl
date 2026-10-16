@@ -90,10 +90,7 @@ using Colors: Colors
         end
         @testset verbose = true "Performance" begin
             @testset "Type stability" begin
-                if VERSION < v"1.12"
-                    # TODO: fix JET misbehaving
-                    include("type_stability.jl")
-                end
+                include("type_stability.jl")
             end
             @testset "Allocations" begin
                 include("allocations.jl")
