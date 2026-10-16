@@ -8,7 +8,7 @@ function postprocess!(
     postprocessing_minimizes::Symbol,
 )
     # flag which colors are actually used during decompression
-    nb_colors = maximum(color)
+    nb_colors = maximum(color; init=0)
     color_used = zeros(Bool, nb_colors)
 
     # nonzero diagonal coefficients force the use of their respective color (there can be no neutral colors if the diagonal is fully nonzero)
