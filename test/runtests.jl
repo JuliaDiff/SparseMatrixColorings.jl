@@ -72,6 +72,9 @@ using Colors: Colors
             end
         end
         @testset verbose = true "Correctness" begin
+            @testset "CSC decompression" begin
+                include("decompression.jl")
+            end
             @testset "Small instances" begin
                 include("small.jl")
             end
