@@ -5,8 +5,10 @@ function coloring(
     problem::ColoringProblem{structure,partition},
     algo::ADTypes.AbstractColoringAlgorithm;
     decompression_eltype::Type{R}=Float64,
+    decompression_uplo::Symbol=:F,
     symmetric_pattern::Bool=false,
 ) where {structure,partition,R}
+    check_valid_decompression_uplo(problem, decompression_uplo)
     symmetric_pattern = symmetric_pattern || A isa Union{Symmetric,Hermitian}
     if structure == :nonsymmetric
         if partition == :column
@@ -27,6 +29,7 @@ function coloring(
         problem,
         GreedyColoringAlgorithm(),
         R,
+        decompression_uplo,
         symmetric_pattern;
         forced_colors,
     )

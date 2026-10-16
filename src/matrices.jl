@@ -71,14 +71,14 @@ and the reference sparsity pattern encoded in a graph structure.
 This function only checks necessary conditions for the two sparsity patterns to match.
 In particular, it may return `true` even if the patterns are not identical.
 
-When A is a `SparseMatrixCSC`, additional checks on the sparsity structure are performed.
+When A is an `AbstractSparseMatrix`, additional checks on the sparsity structure are performed.
 
 # Return value
 - `true`  : the sparsity patterns are potentially compatible
 - `false` : the sparsity patterns are definitely incompatible
 """
 compatible_pattern(A::AbstractMatrix, bg::BipartiteGraph) = size(A) == size(bg.S2)
-function compatible_pattern(A::SparseMatrixCSC, bg::BipartiteGraph)
+function compatible_pattern(A::AbstractSparseMatrix, bg::BipartiteGraph)
     return size(A) == size(bg.S2) && nnz(A) == nnz(bg.S2)
 end
 
@@ -86,7 +86,7 @@ function compatible_pattern(A::AbstractMatrix, ag::AdjacencyGraph, uplo::Symbol)
     return size(A) == size(ag.S)
 end
 
-function compatible_pattern(A::SparseMatrixCSC, ag::AdjacencyGraph, uplo::Symbol)
+function compatible_pattern(A::AbstractSparseMatrix, ag::AdjacencyGraph, uplo::Symbol)
     nnzS = (uplo == :L || uplo == :U) ? (nb_edges(ag) + ag.nb_self_loops) : nnz(ag.S)
     return size(A) == size(ag.S) && nnz(A) == nnzS
 end

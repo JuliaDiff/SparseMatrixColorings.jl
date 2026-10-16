@@ -52,12 +52,6 @@ end;
             A0 = T(sparse(Symmetric(sprand(rng, n, n, p))))
             test_coloring_decompression(A0, problem, algo; gpu=true)
         end
-        A0 = T(sparse(Diagonal(ones(10))))
-        result = coloring(A0, problem, algo)
-        B = compress(A0, result)
-        @test_throws SMC.UnsupportedDecompressionError decompress!(
-            similar(A0), B, result, :U
-        )
     end
 end;
 
@@ -69,9 +63,6 @@ end;
         result = coloring(A0, problem, algo)
         B = compress(A0, result)
         @test_throws SMC.UnsupportedDecompressionError decompress!(similar(A0), B, result)
-        @test_throws SMC.UnsupportedDecompressionError decompress!(
-            similar(A0), B, result, :F
-        )
     end
 end;
 

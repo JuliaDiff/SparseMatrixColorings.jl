@@ -1,6 +1,7 @@
 module SparseMatrixColoringsGPUArraysExt
 
 using GPUArrays: AbstractGPUSparseMatrix, dense_array_type
+using LinearAlgebra: tril, triu
 using SparseArrays: SparseMatrixCSC
 import SparseMatrixColorings as SMC
 
@@ -37,11 +38,20 @@ end
 
 ## Decompression
 
+function SMC.decompress(
+    B::AbstractMatrix, result::SMC.StarSetColoringResult{<:AbstractGPUSparseMatrix}
+)
+    (; decompression_uplo) = result
+    A = SMC.respectful_similar(result.A, eltype(B))
+    if decompression_uplo != :F
+        fill!(A.nzVal, one(eltype(B)))
+        A = decompression_uplo == :L ? tril(A) : triu(A)
+    end
+    return SMC.decompress!(A, B, result)
+end
+
 function SMC.decompress!(
-    A::AbstractGPUSparseMatrix,
-    B::AbstractMatrix,
-    result::SMC.TreeSetColoringResult,
-    uplo::Symbol=:F,
+    A::AbstractGPUSparseMatrix, B::AbstractMatrix, result::SMC.TreeSetColoringResult
 )
     return throw(
         SMC.UnsupportedDecompressionError(
