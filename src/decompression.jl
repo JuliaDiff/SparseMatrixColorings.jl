@@ -217,7 +217,7 @@ Compression means summing either the columns or the rows of `A` which share the 
 It is done by calling [`compress`](@ref).
 
 For `:symmetric` coloring results (and for those only), the part of `A` which gets updated (the Upper triangle, the Lower triangle, or the Full matrix) is selected once and for all with the `decompression_uplo` keyword of [`coloring`](@ref), and it is therefore not passed at decompression time.
-When `A isa SparseMatrixCSC` and `uplo != :F`, the target matrix must only store the relevant triangle.
+When `A isa SparseMatrixCSC` and `decompression_uplo != :F`, the target matrix must only store the relevant triangle.
 
 !!! warning
     For some coloring variants, the `result` object is mutated during decompression.
@@ -285,7 +285,7 @@ Decompress the vector `b` corresponding to color `c` in-place into `A`, given a 
     This function will only update some coefficients of `A`, without resetting the rest to zero.
 
 For `:symmetric` coloring results (and for those only), the part of `A` which gets updated (the Upper triangle, the Lower triangle, or the Full matrix) is selected once and for all with the `decompression_uplo` keyword of [`coloring`](@ref), and it is therefore not passed at decompression time.
-When `A isa SparseMatrixCSC` and `uplo != :F`, the target matrix must only store the relevant triangle.
+When `A isa SparseMatrixCSC` and `decompression_uplo != :F`, the target matrix must only store the relevant triangle.
 
 !!! warning
     For some coloring variants, the `result` object is mutated during decompression.
@@ -463,9 +463,6 @@ function decompress!(A::AbstractMatrix, B::AbstractMatrix, result::StarSetColori
     check_compatible_pattern(A, ag, decompression_uplo)
     fill!(A, zero(eltype(A)))
 
-    # `compressed_indices` only holds the coefficients of the requested triangle,
-    # so it is indexed by a running counter `l` mirroring `star_csc_indices`,
-    # not by the position `k` in the full pattern of `S`.
     rvS = rowvals(S)
     l = 0
     for j in axes(S, 2)
@@ -490,8 +487,6 @@ function decompress_single_color!(
     upper_index = c * S.n
     rvS = rowvals(S)
     if decompression_uplo == :F
-        # `compressed_indices` is indexed by the full pattern, so we can restrict the
-        # traversal to the columns of color `c`, where the hub is always `j`.
         for j in group[c]
             for k in nzrange(S, j)
                 # Check if the color c is used to recover A[i,j] / A[j,i]
@@ -509,9 +504,6 @@ function decompress_single_color!(
             end
         end
     else
-        # `compressed_indices` only holds the requested triangle, so it must be walked
-        # with a running counter over the whole pattern. The hub is then not necessarily
-        # `j`, so the spoke is decoded from the stored value `(c - 1) * S.n + spoke`.
         l = 0
         for j in axes(S, 2)
             for k in nzrange(S, j)
@@ -528,12 +520,50 @@ function decompress_single_color!(
     return A
 end
 
+function decompress_single_color!(
+    A::SparseMatrixCSC, b::AbstractVector, c::Integer, result::StarSetColoringResult
+)
+    (; ag, compressed_indices, group, decompression_uplo) = result
+    (; S) = ag
+    check_compatible_pattern(A, ag, decompression_uplo)
+
+    lower_index = (c - 1) * S.n + 1
+    upper_index = c * S.n
+    rvS = rowvals(S)
+    rvA = rowvals(A)
+    nzA = nonzeros(A)
+    for j in group[c]
+        for k in nzrange(S, j)
+            i = rvS[k]
+            if in_triangle(i, j, decompression_uplo)
+                p = if decompression_uplo == :L
+                    A.colptr[j + 1] - (S.colptr[j + 1] - k)
+                else
+                    A.colptr[j] + (k - S.colptr[j])
+                end
+                index = compressed_indices[p]
+                if lower_index <= index <= upper_index
+                    nzA[p] = b[index - lower_index + 1]
+                end
+            end
+            if i != j && in_triangle(j, i, decompression_uplo)
+                p = searchsortedfirst(
+                    rvA, j, A.colptr[i], A.colptr[i + 1] - 1, Base.Order.Forward
+                )
+                index = compressed_indices[p]
+                if lower_index <= index <= upper_index
+                    nzA[p] = b[index - lower_index + 1]
+                end
+            end
+        end
+    end
+    return A
+end
+
 function decompress!(A::SparseMatrixCSC, B::AbstractMatrix, result::StarSetColoringResult)
     (; ag, compressed_indices, decompression_uplo) = result
     nzA = nonzeros(A)
     check_compatible_pattern(A, ag, decompression_uplo)
-    # `A` stores exactly the requested triangle, so its nonzeros are in bijection with
-    # `compressed_indices`, in the same order.
     for k in eachindex(nzA, compressed_indices)
         nzA[k] = B[compressed_indices[k]]
     end
