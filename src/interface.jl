@@ -313,7 +313,7 @@ function _coloring(
         vertices_in_order = vertices(ag, order)
         return star_coloring(ag, vertices_in_order, algo.postprocessing; forced_colors)
     end
-    color, star_set = argmin(maximum ∘ first, color_and_star_set_by_order)
+    color, star_set = argmin(t -> maximum(first(t); init=0), color_and_star_set_by_order)
     if speed_setting isa WithResult
         return StarSetColoringResult(A, ag, color, star_set)
     else
@@ -334,13 +334,7 @@ function _coloring(
         vertices_in_order = vertices(ag, order)
         return acyclic_coloring(ag, vertices_in_order, algo.postprocessing)
     end
-    # if `color` is empty, `maximum` will fail but `color_and_tree_set_by_order`
-    # is also one so we can just add a special case for this
-    if length(color_and_tree_set_by_order) == 1
-        color, tree_set = only(color_and_tree_set_by_order)
-    else
-        color, tree_set = argmin(maximum ∘ first, color_and_tree_set_by_order)
-    end
+    color, tree_set = argmin(t -> maximum(first(t); init=0), color_and_tree_set_by_order)
     if speed_setting isa WithResult
         return TreeSetColoringResult(A, ag, color, tree_set, R)
     else
