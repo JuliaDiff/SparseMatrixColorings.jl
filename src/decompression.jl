@@ -631,7 +631,7 @@ function decompress!(
     return A
 end
 
-@inline function set_symmetric_csc!(
+Base.@propagate_inbounds function set_symmetric_csc!(
     nzA, A_colptr, lower_triangle_offsets, upper_triangle_offsets, counter, i, j, val, uplo
 )
     #! format: off
@@ -701,19 +701,19 @@ function decompress_csc!(
     # Recover the diagonal coefficients of A
     if !augmented_graph(ag)
         if uplo == :L
-            for i in diagonal_indices
+            @inbounds for i in diagonal_indices
                 # A[i, i] is the first element in column i
                 nzind = A_colptr[i]
                 nzA[nzind] = B[i, color[i]]
             end
         elseif uplo == :U
-            for i in diagonal_indices
+            @inbounds for i in diagonal_indices
                 # A[i, i] is the last element in column i
                 nzind = A_colptr[i + 1] - 1
                 nzA[nzind] = B[i, color[i]]
             end
         else  # uplo == :F
-            for (k, i) in enumerate(diagonal_indices)
+            @inbounds for (k, i) in enumerate(diagonal_indices)
                 nzind = diagonal_nzind[k]
                 nzA[nzind] = B[i, color[i]]
             end
@@ -724,7 +724,7 @@ function decompress_csc!(
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in 1:nt
+    @inbounds for k in 1:nt
         # Positions of the first and last edges of the tree
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
