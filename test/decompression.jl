@@ -1,7 +1,7 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: decompress_csc!
+using SparseMatrixColorings: SparsityPatternCSC, decompress_csc!
 using Test
 
 function test_star_csc_decompression(T, Ti, order, postprocessing)
@@ -74,5 +74,92 @@ end
         postprocessing in (false, true)
 
         test_star_csc_decompression(T, Ti, order, postprocessing)
+    end
+end
+
+function test_tree_csc_decompression(T, Ti, order, postprocessing)
+    problem = ColoringProblem(; structure=:symmetric)
+    algorithm = GreedyColoringAlgorithm(order; decompression=:substitution, postprocessing)
+    @testset "$pattern" for pattern in (:blocks, :mixed, :diagonal, :empty)
+        A = spzeros(T, Ti, 10, 10)
+        if pattern in (:blocks, :mixed)
+            for j in 1:4, i in 1:(j - 1)
+                A[i, j] = A[j, i] = T(10i + j)
+            end
+            edges = if pattern == :blocks
+                [(6, 7), (6, 8), (7, 8)]
+            else
+                [(4, 5), (5, 6), (6, 7), (8, 9)]
+            end
+            for (i, j) in edges
+                A[i, j] = A[j, i] = T(10i + j)
+            end
+        end
+        if pattern != :empty
+            # Missing diagonals, a structural zero, and an empty last column.
+            A[2, 2] = T(2)
+            A[8, 8] = T(8)
+            A[3, 3] = one(T)
+            A[3, 3] = zero(T)
+        end
+        result = coloring(SparsityPatternCSC(A), problem, algorithm; decompression_eltype=T)
+        sizes = diff(result.tree_edge_indices)
+        if pattern == :blocks
+            @test !isempty(sizes)
+            @test all(==(1), sizes)
+        elseif pattern == :mixed
+            @test any(==(1), sizes)
+            @test any(>(1), sizes)
+        end
+        B = compress(A, result)
+        @testset "$uplo" for uplo in (:F, :L, :U)
+            expected = if uplo == :F
+                A
+            elseif uplo == :L
+                tril(A)
+            else
+                triu(A)
+            end
+            values = fill(T(NaN), nnz(expected))
+            # Reuse the result with changed compressed values and stale scratch data.
+            for scale in (one(T), T(-2))
+                compressed = scale .* B
+                fill!(result.buffer, T(NaN))
+                @test decompress_csc!(values, expected.colptr, compressed, result, uplo) ===
+                    nothing
+                @test values == scale .* nonzeros(expected)
+                @test (@allocated decompress_csc!(
+                    values, expected.colptr, compressed, result, uplo
+                )) == 0
+
+                dest = copy(expected)
+                fill!(nonzeros(dest), T(NaN))
+                @test decompress!(dest, compressed, result, uplo) === dest
+                @test dest == scale .* expected
+                @test (@allocated decompress!(dest, compressed, result, uplo)) == 0
+            end
+
+            # The CSC entry point also accepts views of its input/output buffers.
+            storage = fill(T(NaN), 2nnz(expected))
+            values_view = @view storage[1:2:end]
+            compressed_view = @view B[:, :]
+            @test decompress_csc!(
+                values_view, expected.colptr, compressed_view, result, uplo
+            ) === nothing
+            @test values_view == nonzeros(expected)
+            @test (@allocated decompress_csc!(
+                values_view, expected.colptr, compressed_view, result, uplo
+            )) == 0
+        end
+    end
+    return nothing
+end
+
+@testset "Tree CSC decompression" begin
+    @testset "$T, $Ti, $order, postprocessing=$postprocessing" for T in (Float32, Float64),
+        Ti in (Int32, Int64), order in (NaturalOrder(), LargestFirst()),
+        postprocessing in (false, true)
+
+        test_tree_csc_decompression(T, Ti, order, postprocessing)
     end
 end
