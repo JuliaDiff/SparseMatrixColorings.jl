@@ -726,35 +726,34 @@ function decompress_csc!(
                     uplo,
                 )
             end
-            continue
-        end
+        else
+            # Reset the buffer to zero for all vertices in the tree (except the root)
+            for pos in first:last
+                (vertex, _) = reverse_bfs_orders[pos]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[last]
+            buffer_right_type[root] = zero(R)
 
-        # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
-            (vertex, _) = reverse_bfs_orders[pos]
-            buffer_right_type[vertex] = zero(R)
-        end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[last]
-        buffer_right_type[root] = zero(R)
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                counter += 1
+                val = B[i, color[j]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
 
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            counter += 1
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
-
-            set_symmetric_csc!(
-                nzA,
-                A_colptr,
-                lower_triangle_offsets,
-                upper_triangle_offsets,
-                counter,
-                i,
-                j,
-                val,
-                uplo,
-            )
+                set_symmetric_csc!(
+                    nzA,
+                    A_colptr,
+                    lower_triangle_offsets,
+                    upper_triangle_offsets,
+                    counter,
+                    i,
+                    j,
+                    val,
+                    uplo,
+                )
+            end
         end
     end
     return nothing
