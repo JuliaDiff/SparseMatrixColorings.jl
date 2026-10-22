@@ -894,6 +894,8 @@ struct TreeSetBicoloringResult{
     A_indices::Vector{T}
     "storage for the edges of each tree in reverse BFS order"
     reverse_bfs_orders::Vector{Tuple{T,T}}
+    "whether each tree is a star and can be decompressed without substitution"
+    is_star::Vector{Bool}
     "internal storage for the positions of the trees inside `reverse_bfs_orders`"
     tree_edge_indices::Vector{T}
     "number of trees"
@@ -914,7 +916,7 @@ function TreeSetBicoloringResult(
     symmetric_to_column::Vector{T},
     decompression_eltype::Type{R},
 ) where {T<:Integer,R}
-    (; reverse_bfs_orders, tree_edge_indices, nt) = tree_set
+    (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = tree_set
     m, n = size(A)
     column_group = group_by_color(T, column_color)
     row_group = group_by_color(T, row_color)
@@ -969,6 +971,7 @@ function TreeSetBicoloringResult(
         symmetric_to_row,
         A_indices,
         reverse_bfs_orders,
+        is_star,
         tree_edge_indices,
         nt,
         buffer,

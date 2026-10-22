@@ -869,6 +869,7 @@ function decompress!(
         symmetric_to_row,
         symmetric_to_column,
         reverse_bfs_orders,
+        is_star,
         tree_edge_indices,
         nt,
         buffer,
@@ -888,26 +889,39 @@ function decompress!(
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
-            (vertex, _) = reverse_bfs_orders[pos]
-            buffer_right_type[vertex] = zero(R)
-        end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[last]
-        buffer_right_type[root] = zero(R)
+        # A star needs no substitution or scratch-buffer updates.
+        if is_star[k]
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                cj = symmetric_color[j]
+                if in_triangle(i, j, :L)
+                    A[i - n, j] = Bc[i - n, symmetric_to_column[cj]]
+                else
+                    A[j - n, i] = Br[symmetric_to_row[cj], i]
+                end
+            end
+        else
+            # Reset the buffer to zero for all vertices in the tree (except the root)
+            for pos in first:last
+                (vertex, _) = reverse_bfs_orders[pos]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[last]
+            buffer_right_type[root] = zero(R)
 
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            cj = symmetric_color[j]
-            if in_triangle(i, j, :L)
-                val = Bc[i - n, symmetric_to_column[cj]] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
-                A[i - n, j] = val
-            else
-                val = Br[symmetric_to_row[cj], i] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
-                A[j - n, i] = val
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                cj = symmetric_color[j]
+                if in_triangle(i, j, :L)
+                    val = Bc[i - n, symmetric_to_column[cj]] - buffer_right_type[i]
+                    buffer_right_type[j] = buffer_right_type[j] + val
+                    A[i - n, j] = val
+                else
+                    val = Br[symmetric_to_row[cj], i] - buffer_right_type[i]
+                    buffer_right_type[j] = buffer_right_type[j] + val
+                    A[j - n, i] = val
+                end
             end
         end
     end
@@ -925,6 +939,7 @@ function decompress!(
         symmetric_to_column,
         symmetric_to_row,
         reverse_bfs_orders,
+        is_star,
         tree_edge_indices,
         nt,
         A_indices,
@@ -946,36 +961,51 @@ function decompress!(
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
-            (vertex, _) = reverse_bfs_orders[pos]
-            buffer_right_type[vertex] = zero(R)
-        end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[last]
-        buffer_right_type[root] = zero(R)
-
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            cj = symmetric_color[j]
-            counter += 1
-
-            #! format: off
-            if in_triangle(i, j, :L)
-                val = Bc[i - n, symmetric_to_column[cj]] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
-
-                # A[i-n,j] is stored at A_indices[counter] in nonzeros(A)
-                nzA[A_indices[counter]] = val
-
-            else
-                val = Br[symmetric_to_row[cj], i] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
-
-                # A[j-n,i] is stored at A_indices[counter] in nonzeros(A)
+        # A star needs no substitution or scratch-buffer updates.
+        if is_star[k]
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                cj = symmetric_color[j]
+                counter += 1
+                val = if in_triangle(i, j, :L)
+                    Bc[i - n, symmetric_to_column[cj]]
+                else
+                    Br[symmetric_to_row[cj], i]
+                end
                 nzA[A_indices[counter]] = val
             end
-            #! format: on
+        else
+            # Reset the buffer to zero for all vertices in the tree (except the root)
+            for pos in first:last
+                (vertex, _) = reverse_bfs_orders[pos]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[last]
+            buffer_right_type[root] = zero(R)
+
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                cj = symmetric_color[j]
+                counter += 1
+
+                #! format: off
+                if in_triangle(i, j, :L)
+                    val = Bc[i - n, symmetric_to_column[cj]] - buffer_right_type[i]
+                    buffer_right_type[j] = buffer_right_type[j] + val
+
+                    # A[i-n,j] is stored at A_indices[counter] in nonzeros(A)
+                    nzA[A_indices[counter]] = val
+
+                else
+                    val = Br[symmetric_to_row[cj], i] - buffer_right_type[i]
+                    buffer_right_type[j] = buffer_right_type[j] + val
+
+                    # A[j-n,i] is stored at A_indices[counter] in nonzeros(A)
+                    nzA[A_indices[counter]] = val
+                end
+                #! format: on
+            end
         end
     end
     return A
