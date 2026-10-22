@@ -1,7 +1,7 @@
 using LinearAlgebra
 using SparseArrays
 using SparseMatrixColorings
-using SparseMatrixColorings: decompress_csc!
+using SparseMatrixColorings: SparsityPatternCSC, decompress_csc!
 using Test
 
 function test_star_csc_decompression(T, Ti, order, postprocessing)
@@ -74,5 +74,194 @@ end
         postprocessing in (false, true)
 
         test_star_csc_decompression(T, Ti, order, postprocessing)
+    end
+end
+
+function test_tree_csc_decompression(T, Ti, order, postprocessing)
+    problem = ColoringProblem(; structure=:symmetric)
+    algorithm = GreedyColoringAlgorithm(order; decompression=:substitution, postprocessing)
+    @testset "$pattern" for pattern in (
+        :blocks, :star_low, :star_middle, :star_high, :two_edges, :mixed, :diagonal, :empty
+    )
+        A = spzeros(T, Ti, 10, 10)
+        if pattern in (:blocks, :mixed)
+            clique_size = pattern == :blocks ? 4 : 3
+            for j in 1:clique_size, i in 1:(j - 1)
+                A[i, j] = A[j, i] = T(10i + j)
+            end
+            edges = if pattern == :blocks
+                [(6, 7), (6, 8), (7, 8)]
+            else
+                [(4, 5), (5, 6), (6, 7), (8, 9)]
+            end
+            for (i, j) in edges
+                A[i, j] = A[j, i] = T(10i + j)
+            end
+        end
+        if pattern in (:star_low, :star_middle, :star_high, :two_edges)
+            hub = if pattern == :star_low
+                1
+            elseif pattern == :star_high
+                9
+            else
+                5
+            end
+            leaves = pattern == :two_edges ? (2, 7) : (2, 4, 7)
+            for leaf in leaves
+                A[leaf, hub] = A[hub, leaf] = T(10leaf + hub)
+            end
+        end
+        if pattern != :empty
+            # Missing diagonals, a structural zero, and an empty last column.
+            A[2, 2] = T(2)
+            A[8, 8] = T(8)
+            A[3, 3] = one(T)
+            A[3, 3] = zero(T)
+        end
+        result = coloring(SparsityPatternCSC(A), problem, algorithm; decompression_eltype=T)
+        sizes = diff(result.tree_edge_indices)
+        if pattern == :blocks
+            @test !isempty(sizes)
+            @test all(==(1), sizes)
+            @test all(result.is_star)
+        elseif pattern in (:star_low, :star_middle, :star_high, :two_edges)
+            @test sizes == [pattern == :two_edges ? 2 : 3]
+            @test all(result.is_star)
+        elseif pattern == :mixed
+            @test any(==(1), sizes)
+            @test any(>(1), sizes)
+            @test any(!, result.is_star)
+        end
+        B = compress(A, result)
+        @testset "$uplo" for uplo in (:F, :L, :U)
+            expected = if uplo == :F
+                A
+            elseif uplo == :L
+                tril(A)
+            else
+                triu(A)
+            end
+            values = fill(T(NaN), nnz(expected))
+            # Reuse the result with changed compressed values and stale scratch data.
+            for scale in (one(T), T(-2))
+                compressed = scale .* B
+                fill!(result.buffer, T(NaN))
+                @test decompress_csc!(values, expected.colptr, compressed, result, uplo) ===
+                    nothing
+                @test values == scale .* nonzeros(expected)
+                if all(result.is_star)
+                    @test all(isnan, result.buffer)
+                end
+                @test (@allocated decompress_csc!(
+                    values, expected.colptr, compressed, result, uplo
+                )) == 0
+
+                dest = copy(expected)
+                fill!(nonzeros(dest), T(NaN))
+                @test decompress!(dest, compressed, result, uplo) === dest
+                @test dest == scale .* expected
+                @test (@allocated decompress!(dest, compressed, result, uplo)) == 0
+            end
+
+            # The CSC entry point also accepts views of its input/output buffers.
+            storage = fill(T(NaN), 2nnz(expected))
+            values_view = @view storage[1:2:end]
+            compressed_view = @view B[:, :]
+            @test decompress_csc!(
+                values_view, expected.colptr, compressed_view, result, uplo
+            ) === nothing
+            @test values_view == nonzeros(expected)
+            @test (@allocated decompress_csc!(
+                values_view, expected.colptr, compressed_view, result, uplo
+            )) == 0
+        end
+    end
+    return nothing
+end
+
+@testset "Tree CSC decompression" begin
+    @testset "$T, $Ti, $order, postprocessing=$postprocessing" for T in (Float32, Float64),
+        Ti in (Int32, Int64), order in (NaturalOrder(), LargestFirst()),
+        postprocessing in (false, true)
+
+        test_tree_csc_decompression(T, Ti, order, postprocessing)
+    end
+end
+
+function test_tree_bicoloring_decompression(T, Ti, order, target)
+    problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
+    algorithm = GreedyColoringAlgorithm(
+        order;
+        decompression=:substitution,
+        postprocessing=target != :none,
+        postprocessing_minimizes=target == :none ? :all_colors : target,
+    )
+    @testset "$pattern" for pattern in (
+        :single_edge, :row_star, :column_star, :two_edges, :mixed, :empty
+    )
+        A = spzeros(T, Ti, 8, 9)
+        edges = if pattern == :single_edge
+            [(2, 3)]
+        elseif pattern == :row_star
+            [(2, 1), (2, 3), (2, 5)]
+        elseif pattern == :column_star
+            [(1, 2), (3, 2), (5, 2)]
+        elseif pattern == :two_edges
+            [(2, 1), (2, 3)]
+        elseif pattern == :mixed
+            [(1, 1), (1, 2), (2, 2), (4, 4), (5, 5), (5, 6), (5, 7)]
+        else
+            Tuple{Int,Int}[]
+        end
+        for (i, j) in edges
+            A[i, j] = T <: Complex ? T(10i + j, i - j) : T(10i + j)
+        end
+        # Keep a structural zero, empty rows, and empty columns.
+        if !isempty(edges)
+            nonzeros(A)[end] = zero(T)
+        end
+        result = coloring(A, problem, algorithm; decompression_eltype=T)
+        sizes = diff(result.tree_edge_indices)
+        if pattern == :mixed
+            @test any(!, result.is_star)
+            @test any(result.is_star .& (sizes .> 1))
+            @test any(==(1), sizes)
+        else
+            @test all(result.is_star)
+            if pattern in (:row_star, :column_star)
+                @test sizes == [3]
+            elseif pattern == :two_edges
+                @test sizes == [2]
+            elseif pattern == :single_edge
+                @test sizes == [1]
+            else
+                @test isempty(sizes)
+            end
+        end
+        Br, Bc = compress(A, result)
+        @testset "$(typeof(dest))" for dest in (copy(A), Matrix(A))
+            for scale in (one(T), T(-2))
+                rows, columns = scale .* Br, scale .* Bc
+                rows_view, columns_view = @view(rows[:, :]), @view(columns[:, :])
+                fill!(dest isa SparseMatrixCSC ? nonzeros(dest) : dest, T(NaN))
+                fill!(result.buffer, T(NaN))
+                @test decompress!(dest, rows_view, columns_view, result) === dest
+                @test dest == scale .* A
+                if all(result.is_star)
+                    @test all(isnan, result.buffer)
+                end
+                @test (@allocated decompress!(dest, rows_view, columns_view, result)) == 0
+            end
+        end
+    end
+    return nothing
+end
+
+@testset "Tree bicoloring decompression" begin
+    @testset "$T, $Ti, $order, target=$target" for T in (Float32, Float64, ComplexF64),
+        Ti in (Int32, Int64), order in (NaturalOrder(), LargestFirst()),
+        target in (:none, :all_colors, :row_colors, :column_colors)
+
+        test_tree_bicoloring_decompression(T, Ti, order, target)
     end
 end
