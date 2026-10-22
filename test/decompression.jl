@@ -80,10 +80,13 @@ end
 function test_tree_csc_decompression(T, Ti, order, postprocessing)
     problem = ColoringProblem(; structure=:symmetric)
     algorithm = GreedyColoringAlgorithm(order; decompression=:substitution, postprocessing)
-    @testset "$pattern" for pattern in (:blocks, :mixed, :diagonal, :empty)
+    @testset "$pattern" for pattern in (
+        :blocks, :star_low, :star_middle, :star_high, :two_edges, :mixed, :diagonal, :empty
+    )
         A = spzeros(T, Ti, 10, 10)
         if pattern in (:blocks, :mixed)
-            for j in 1:4, i in 1:(j - 1)
+            clique_size = pattern == :blocks ? 4 : 3
+            for j in 1:clique_size, i in 1:(j - 1)
                 A[i, j] = A[j, i] = T(10i + j)
             end
             edges = if pattern == :blocks
@@ -93,6 +96,19 @@ function test_tree_csc_decompression(T, Ti, order, postprocessing)
             end
             for (i, j) in edges
                 A[i, j] = A[j, i] = T(10i + j)
+            end
+        end
+        if pattern in (:star_low, :star_middle, :star_high, :two_edges)
+            hub = if pattern == :star_low
+                1
+            elseif pattern == :star_high
+                9
+            else
+                5
+            end
+            leaves = pattern == :two_edges ? (2, 7) : (2, 4, 7)
+            for leaf in leaves
+                A[leaf, hub] = A[hub, leaf] = T(10leaf + hub)
             end
         end
         if pattern != :empty
@@ -107,9 +123,14 @@ function test_tree_csc_decompression(T, Ti, order, postprocessing)
         if pattern == :blocks
             @test !isempty(sizes)
             @test all(==(1), sizes)
+            @test all(result.is_star)
+        elseif pattern in (:star_low, :star_middle, :star_high, :two_edges)
+            @test sizes == [pattern == :two_edges ? 2 : 3]
+            @test all(result.is_star)
         elseif pattern == :mixed
             @test any(==(1), sizes)
             @test any(>(1), sizes)
+            @test any(!, result.is_star)
         end
         B = compress(A, result)
         @testset "$uplo" for uplo in (:F, :L, :U)
@@ -128,6 +149,9 @@ function test_tree_csc_decompression(T, Ti, order, postprocessing)
                 @test decompress_csc!(values, expected.colptr, compressed, result, uplo) ===
                     nothing
                 @test values == scale .* nonzeros(expected)
+                if all(result.is_star)
+                    @test all(isnan, result.buffer)
+                end
                 @test (@allocated decompress_csc!(
                     values, expected.colptr, compressed, result, uplo
                 )) == 0

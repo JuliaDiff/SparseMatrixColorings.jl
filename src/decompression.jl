@@ -661,6 +661,7 @@ function decompress_csc!(
         ag,
         color,
         reverse_bfs_orders,
+        is_star,
         tree_edge_indices,
         nt,
         diagonal_indices,
@@ -707,22 +708,24 @@ function decompress_csc!(
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # A one-edge tree needs no substitution or scratch-buffer updates.
-        if first == last
-            (i, j) = reverse_bfs_orders[first]
-            counter += 1
-            val = B[i, color[j]]
-            set_symmetric_csc!(
-                nzA,
-                A_colptr,
-                lower_triangle_offsets,
-                upper_triangle_offsets,
-                counter,
-                i,
-                j,
-                val,
-                uplo,
-            )
+        # A star needs no substitution or scratch-buffer updates.
+        if is_star[k]
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                counter += 1
+                val = B[i, color[j]]
+                set_symmetric_csc!(
+                    nzA,
+                    A_colptr,
+                    lower_triangle_offsets,
+                    upper_triangle_offsets,
+                    counter,
+                    i,
+                    j,
+                    val,
+                    uplo,
+                )
+            end
             continue
         end
 
