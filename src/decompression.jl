@@ -610,6 +610,46 @@ function decompress!(
     return A
 end
 
+Base.@propagate_inbounds function set_symmetric_csc!(
+    nzA, A_colptr, lower_triangle_offsets, upper_triangle_offsets, counter, i, j, val, uplo
+)
+    #! format: off
+    # A[i,j] is in the lower triangular part of A
+    if in_triangle(i, j, :L)
+        # uplo = :L or uplo = :F
+        # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
+        if uplo != :U
+            nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
+            nzA[nzind] = val
+        end
+
+        # uplo = :U or uplo = :F
+        # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
+        if uplo != :L
+            nzind = A_colptr[i] + upper_triangle_offsets[counter]
+            nzA[nzind] = val
+        end
+
+    # A[i,j] is in the upper triangular part of A
+    else
+        # uplo = :U or uplo = :F
+        # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
+        if uplo != :L
+            nzind = A_colptr[j] + upper_triangle_offsets[counter]
+            nzA[nzind] = val
+        end
+
+        # uplo = :L or uplo = :F
+        # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
+        if uplo != :U
+            nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
+            nzA[nzind] = val
+        end
+    end
+    #! format: on
+    return nothing
+end
+
 function decompress_csc!(
     nzA::AbstractVector{R},
     A_colptr::AbstractVector{<:Integer},
@@ -621,6 +661,7 @@ function decompress_csc!(
         ag,
         color,
         reverse_bfs_orders,
+        is_star,
         tree_edge_indices,
         nt,
         diagonal_indices,
@@ -639,19 +680,19 @@ function decompress_csc!(
     # Recover the diagonal coefficients of A
     if !augmented_graph(ag)
         if uplo == :L
-            for i in diagonal_indices
+            @inbounds for i in diagonal_indices
                 # A[i, i] is the first element in column i
                 nzind = A_colptr[i]
                 nzA[nzind] = B[i, color[i]]
             end
         elseif uplo == :U
-            for i in diagonal_indices
+            @inbounds for i in diagonal_indices
                 # A[i, i] is the last element in column i
                 nzind = A_colptr[i + 1] - 1
                 nzA[nzind] = B[i, color[i]]
             end
         else  # uplo == :F
-            for (k, i) in enumerate(diagonal_indices)
+            @inbounds for (k, i) in enumerate(diagonal_indices)
                 nzind = diagonal_nzind[k]
                 nzA[nzind] = B[i, color[i]]
             end
@@ -662,60 +703,57 @@ function decompress_csc!(
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    for k in 1:nt
+    @inbounds for k in 1:nt
         # Positions of the first and last edges of the tree
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
-            (vertex, _) = reverse_bfs_orders[pos]
-            buffer_right_type[vertex] = zero(R)
-        end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[last]
-        buffer_right_type[root] = zero(R)
-
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            counter += 1
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
-
-            #! format: off
-            # A[i,j] is in the lower triangular part of A
-            if in_triangle(i, j, :L)
-                # uplo = :L or uplo = :F
-                # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
-                if uplo != :U
-                    nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
-                    nzA[nzind] = val
-                end
-
-                # uplo = :U or uplo = :F
-                # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
-                if uplo != :L
-                    nzind = A_colptr[i] + upper_triangle_offsets[counter]
-                    nzA[nzind] = val
-                end
-
-            # A[i,j] is in the upper triangular part of A
-            else
-                # uplo = :U or uplo = :F
-                # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
-                if uplo != :L
-                    nzind = A_colptr[j] + upper_triangle_offsets[counter]
-                    nzA[nzind] = val
-                end
-
-                # uplo = :L or uplo = :F
-                # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
-                if uplo != :U
-                    nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
-                    nzA[nzind] = val
-                end
+        # A star needs no substitution or scratch-buffer updates.
+        if is_star[k]
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                counter += 1
+                val = B[i, color[j]]
+                set_symmetric_csc!(
+                    nzA,
+                    A_colptr,
+                    lower_triangle_offsets,
+                    upper_triangle_offsets,
+                    counter,
+                    i,
+                    j,
+                    val,
+                    uplo,
+                )
             end
-            #! format: on
+        else
+            # Reset the buffer to zero for all vertices in the tree (except the root)
+            for pos in first:last
+                (vertex, _) = reverse_bfs_orders[pos]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[last]
+            buffer_right_type[root] = zero(R)
+
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                counter += 1
+                val = B[i, color[j]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+
+                set_symmetric_csc!(
+                    nzA,
+                    A_colptr,
+                    lower_triangle_offsets,
+                    upper_triangle_offsets,
+                    counter,
+                    i,
+                    j,
+                    val,
+                    uplo,
+                )
+            end
         end
     end
     return nothing

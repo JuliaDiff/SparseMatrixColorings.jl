@@ -387,6 +387,7 @@ struct TreeSetColoringResult{
     color::Vector{T}
     group::GT
     reverse_bfs_orders::Vector{Tuple{T,T}}
+    is_star::Vector{Bool}
     tree_edge_indices::Vector{T}
     nt::T
     diagonal_indices::Vector{T}
@@ -403,7 +404,7 @@ function TreeSetColoringResult(
     tree_set::TreeSet{<:Integer},
     decompression_eltype::Type{R},
 ) where {T<:Integer,R}
-    (; reverse_bfs_orders, tree_edge_indices, nt) = tree_set
+    (; reverse_bfs_orders, is_star, tree_edge_indices, nt) = tree_set
     (; S, nb_self_loops) = ag
     nvertices = length(color)
     group = group_by_color(T, color)
@@ -484,6 +485,7 @@ function TreeSetColoringResult(
         color,
         group,
         reverse_bfs_orders,
+        is_star,
         tree_edge_indices,
         nt,
         diagonal_indices,
