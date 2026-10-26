@@ -491,7 +491,7 @@ struct TreeSet{T}
     (BFS) traversal order of the `k`th tree starting from a depth-minimizing root.
     """
     reverse_bfs_orders::Vector{Tuple{T,T}}
-    "For a tree index `1 <= k <= nt`, `is_star[k]` indicates whether the `k`th three is a star."
+    "For a tree index `1 <= k <= nt`, `is_star[k]` indicates whether the `k`th tree is a star."
     is_star::Vector{Bool}
     """
     `tree_edge_indices[1]` is one and `tree_edge_indices[k+1] - tree_edge_indices[k]` is the number of edges in the `k`th tree.
@@ -656,8 +656,9 @@ function TreeSet(
         queue_end = 0
 
         # Positions of the first and last vertices in the current tree
-        # Note: tree_edge_indices contains the positions of the first and last edges,
-        # so we add to add an offset k-1 between edge indices and vertex indices
+        # Note: tree_edge_indices contains the positions of the first and last edges.
+        # Each tree has one more vertex than edges, so the k-1 previous trees shift
+        # the vertex positions by k-1 with respect to the edge positions.
         first_vertex = tree_edge_indices[k] + (k - 1)
         last_vertex = tree_edge_indices[k + 1] + (k - 1)
 
