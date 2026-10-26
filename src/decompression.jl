@@ -559,9 +559,16 @@ end
 function decompress!(
     A::AbstractMatrix, B::AbstractMatrix, result::TreeSetColoringResult, uplo::Symbol=:F
 )
-    (; ag, color, reverse_bfs_orders, tree_edge_indices, nt, diagonal_indices, buffer) =
-        result
-    (; S) = ag
+    (;
+        ag,
+        color,
+        reverse_bfs_orders,
+        is_star,
+        tree_edge_indices,
+        nt,
+        diagonal_indices,
+        buffer,
+    ) = result
     check_compatible_pattern(A, ag, uplo)
     R = eltype(A)
     fill!(A, zero(R))
@@ -585,25 +592,39 @@ function decompress!(
         first = tree_edge_indices[k]
         last = tree_edge_indices[k + 1] - 1
 
-        # Reset the buffer to zero for all vertices in the tree (except the root)
-        for pos in first:last
-            (vertex, _) = reverse_bfs_orders[pos]
-            buffer_right_type[vertex] = zero(R)
-        end
-        # Reset the buffer to zero for the root vertex
-        (_, root) = reverse_bfs_orders[last]
-        buffer_right_type[root] = zero(R)
-
-        for pos in first:last
-            (i, j) = reverse_bfs_orders[pos]
-            val = B[i, color[j]] - buffer_right_type[i]
-            buffer_right_type[j] = buffer_right_type[j] + val
-
-            if in_triangle(i, j, uplo)
-                A[i, j] = val
+        # A star needs no substitution or scratch-buffer updates.
+        if is_star[k]
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                val = B[i, color[j]]
+                if in_triangle(i, j, uplo)
+                    A[i, j] = val
+                end
+                if in_triangle(j, i, uplo)
+                    A[j, i] = val
+                end
             end
-            if in_triangle(j, i, uplo)
-                A[j, i] = val
+        else
+            # Reset the buffer to zero for all vertices in the tree (except the root)
+            for pos in first:last
+                (vertex, _) = reverse_bfs_orders[pos]
+                buffer_right_type[vertex] = zero(R)
+            end
+            # Reset the buffer to zero for the root vertex
+            (_, root) = reverse_bfs_orders[last]
+            buffer_right_type[root] = zero(R)
+
+            for pos in first:last
+                (i, j) = reverse_bfs_orders[pos]
+                val = B[i, color[j]] - buffer_right_type[i]
+                buffer_right_type[j] = buffer_right_type[j] + val
+
+                if in_triangle(i, j, uplo)
+                    A[i, j] = val
+                end
+                if in_triangle(j, i, uplo)
+                    A[j, i] = val
+                end
             end
         end
     end
