@@ -242,7 +242,7 @@ Base.axes(A::ZeroBasedDecompressionArray) = map(n -> 0:(n - 1), size(A))
         @test decompress_csc!(values, pointers, B, result, uplo) === nothing
         @test values == nonzeros(expected)
 
-        # Destination checks remain active inside the @inbounds loops. A bad
+        # Destination writes retain their ordinary bounds checks. A bad
         # pointer can fail after earlier coefficients have already been written.
         for bad_pointer in (0, 2length(values) + 2)
             bad_pointers = fill(bad_pointer, length(pointers))

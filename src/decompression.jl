@@ -532,9 +532,10 @@ are assumed without checking:
 - The index and offset arrays in `result` have not been modified since coloring.
 
 Substitution decompression checks each destination index immediately before
-writing, even though internal loops use `@inbounds`. Malformed column pointers
-that produce out-of-bounds destination indices throw `BoundsError`. Pattern
-mismatches whose indices remain in bounds can still produce incorrect values.
+writing. Only validated reads and scratch-buffer accesses use `@inbounds`.
+Malformed column pointers that produce out-of-bounds destination indices throw
+`BoundsError`. Pattern mismatches whose indices remain in bounds can still
+produce incorrect values.
 """
 function decompress_csc!(
     nzA::AbstractVector,
@@ -650,9 +651,7 @@ function decompress!(
     return A
 end
 
-# Explicit checkbounds calls stay active under callers' @inbounds, unlike
-# checks wrapped in @boundscheck.
-Base.@propagate_inbounds function set_symmetric_csc!(
+@inline function set_symmetric_csc!(
     nzA, A_colptr, lower_triangle_offsets, upper_triangle_offsets, counter, i, j, val, uplo
 )
     #! format: off
@@ -661,16 +660,14 @@ Base.@propagate_inbounds function set_symmetric_csc!(
         # uplo = :L or uplo = :F
         # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
         if uplo != :U
-            nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
-            checkbounds(nzA, nzind)
+            nzind = @inbounds A_colptr[j + 1] - lower_triangle_offsets[counter]
             nzA[nzind] = val
         end
 
         # uplo = :U or uplo = :F
         # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
         if uplo != :L
-            nzind = A_colptr[i] + upper_triangle_offsets[counter]
-            checkbounds(nzA, nzind)
+            nzind = @inbounds A_colptr[i] + upper_triangle_offsets[counter]
             nzA[nzind] = val
         end
 
@@ -679,16 +676,14 @@ Base.@propagate_inbounds function set_symmetric_csc!(
         # uplo = :U or uplo = :F
         # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
         if uplo != :L
-            nzind = A_colptr[j] + upper_triangle_offsets[counter]
-            checkbounds(nzA, nzind)
+            nzind = @inbounds A_colptr[j] + upper_triangle_offsets[counter]
             nzA[nzind] = val
         end
 
         # uplo = :L or uplo = :F
         # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
         if uplo != :U
-            nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
-            checkbounds(nzA, nzind)
+            nzind = @inbounds A_colptr[i + 1] - lower_triangle_offsets[counter]
             nzA[nzind] = val
         end
     end
@@ -746,24 +741,24 @@ function decompress_csc!(
     # Recover the diagonal coefficients of A
     if !augmented_graph(ag)
         if uplo == :L
-            @inbounds for i in diagonal_indices
+            for i in diagonal_indices
                 # A[i, i] is the first element in column i
                 nzind = A_colptr[i]
-                checkbounds(nzA, nzind)
-                nzA[nzind] = B[i, color[i]]
+                val = @inbounds B[i, color[i]]
+                nzA[nzind] = val
             end
         elseif uplo == :U
-            @inbounds for i in diagonal_indices
+            for i in diagonal_indices
                 # A[i, i] is the last element in column i
                 nzind = A_colptr[i + 1] - 1
-                checkbounds(nzA, nzind)
-                nzA[nzind] = B[i, color[i]]
+                val = @inbounds B[i, color[i]]
+                nzA[nzind] = val
             end
         else  # uplo == :F
-            @inbounds for (k, i) in enumerate(diagonal_indices)
-                nzind = diagonal_nzind[k]
-                checkbounds(nzA, nzind)
-                nzA[nzind] = B[i, color[i]]
+            for (k, i) in enumerate(diagonal_indices)
+                nzind = @inbounds diagonal_nzind[k]
+                val = @inbounds B[i, color[i]]
+                nzA[nzind] = val
             end
         end
     end
@@ -772,17 +767,18 @@ function decompress_csc!(
     counter = 0
 
     # Recover the off-diagonal coefficients of A
-    @inbounds for k in 1:nt
+    for k in 1:nt
         # Positions of the first and last edges of the tree
-        first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
+        first = @inbounds tree_edge_indices[k]
+        last = @inbounds tree_edge_indices[k + 1] - 1
 
         # A star needs no substitution or scratch-buffer updates.
-        if is_star[k]
+        star = @inbounds is_star[k]
+        if star
             for pos in first:last
-                (i, j) = reverse_bfs_orders[pos]
+                (i, j) = @inbounds reverse_bfs_orders[pos]
                 counter += 1
-                val = B[i, color[j]]
+                val = @inbounds B[i, color[j]]
                 set_symmetric_csc!(
                     nzA,
                     A_colptr,
@@ -798,18 +794,18 @@ function decompress_csc!(
         else
             # Reset the buffer to zero for all vertices in the tree (except the root)
             for pos in first:last
-                (vertex, _) = reverse_bfs_orders[pos]
-                buffer_right_type[vertex] = zero(R)
+                (vertex, _) = @inbounds reverse_bfs_orders[pos]
+                @inbounds buffer_right_type[vertex] = zero(R)
             end
             # Reset the buffer to zero for the root vertex
-            (_, root) = reverse_bfs_orders[last]
-            buffer_right_type[root] = zero(R)
+            (_, root) = @inbounds reverse_bfs_orders[last]
+            @inbounds buffer_right_type[root] = zero(R)
 
             for pos in first:last
-                (i, j) = reverse_bfs_orders[pos]
+                (i, j) = @inbounds reverse_bfs_orders[pos]
                 counter += 1
-                val = B[i, color[j]] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
+                val = @inbounds B[i, color[j]] - buffer_right_type[i]
+                @inbounds buffer_right_type[j] = buffer_right_type[j] + val
 
                 set_symmetric_csc!(
                     nzA,
