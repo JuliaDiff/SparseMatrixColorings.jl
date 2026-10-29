@@ -1,3 +1,10 @@
+using Pkg
+
+# GPU packages are only installed for the GPU test group, so that CPU-only runs
+# (including PkgEval) never need to precompile them
+const GPU_TESTS = get(ENV, "JULIA_SMC_TEST_GROUP", nothing) == "GPU"
+GPU_TESTS && Pkg.add(["AMDGPU", "CUDA", "cuSPARSE"])
+
 using Aqua
 using Documenter
 using JET
@@ -8,7 +15,7 @@ using Test
 using Colors: Colors
 
 @testset verbose = true "SparseMatrixColorings" begin
-    if get(ENV, "JULIA_SMC_TEST_GROUP", nothing) == "GPU"
+    if GPU_TESTS
         @testset "CUDA" begin
             using CUDA, cuSPARSE
             if CUDA.functional()
@@ -90,8 +97,11 @@ using Colors: Colors
             @testset "Instances with known colorings" begin
                 include("theory.jl")
             end
-            @testset "SuiteSparse" begin
-                include("suitesparse.jl")
+            # MatrixDepot downloads are unavailable in the PkgEval sandbox
+            if get(ENV, "PKGEVAL", "false") != "true"
+                @testset "SuiteSparse" begin
+                    include("suitesparse.jl")
+                end
             end
         end
         @testset verbose = true "Performance" begin

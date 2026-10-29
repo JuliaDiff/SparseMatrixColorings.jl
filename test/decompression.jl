@@ -4,6 +4,13 @@ using SparseMatrixColorings
 using SparseMatrixColorings: SparsityPatternCSC, decompress_csc!
 using Test
 
+# `coloring` returns a `Union` of result types. Measuring through this function barrier
+# keeps the never-taken branch of the split call from heap-allocating view arguments
+# on Julia < 1.12.
+function allocated_decompress_csc!(nzA, A_colptr, B, result, uplo)
+    return @allocated decompress_csc!(nzA, A_colptr, B, result, uplo)
+end
+
 function test_star_csc_decompression(T, Ti, order, postprocessing)
     problem = ColoringProblem(; structure=:symmetric, partition=:column)
     algorithm = GreedyColoringAlgorithm(order; decompression=:direct, postprocessing)
@@ -36,7 +43,7 @@ function test_star_csc_decompression(T, Ti, order, postprocessing)
             V = fill(T(NaN), nnz(expected))
             @test decompress_csc!(V, expected.colptr, B, result, uplo) === nothing
             @test V == nonzeros(expected)
-            @test (@allocated decompress_csc!(V, expected.colptr, B, result, uplo)) == 0
+            @test allocated_decompress_csc!(V, expected.colptr, B, result, uplo) == 0
 
             dest = copy(expected)
             fill!(nonzeros(dest), T(NaN))
@@ -51,9 +58,9 @@ function test_star_csc_decompression(T, Ti, order, postprocessing)
             @test decompress_csc!(values, expected.colptr, compressed, result, uplo) ===
                 nothing
             @test values == nonzeros(expected)
-            @test (@allocated decompress_csc!(
+            @test allocated_decompress_csc!(
                 values, expected.colptr, compressed, result, uplo
-            )) == 0
+            ) == 0
             mixed = SparseMatrixCSC{ComplexF64,Ti}(expected)
             fill!(nonzeros(mixed), ComplexF64(NaN))
             @test decompress!(mixed, compressed, result, uplo) === mixed
@@ -152,9 +159,9 @@ function test_tree_csc_decompression(T, Ti, order, postprocessing)
                 if all(result.is_star)
                     @test all(isnan, result.buffer)
                 end
-                @test (@allocated decompress_csc!(
+                @test allocated_decompress_csc!(
                     values, expected.colptr, compressed, result, uplo
-                )) == 0
+                ) == 0
 
                 dest = copy(expected)
                 fill!(nonzeros(dest), T(NaN))
@@ -171,9 +178,9 @@ function test_tree_csc_decompression(T, Ti, order, postprocessing)
                 values_view, expected.colptr, compressed_view, result, uplo
             ) === nothing
             @test values_view == nonzeros(expected)
-            @test (@allocated decompress_csc!(
+            @test allocated_decompress_csc!(
                 values_view, expected.colptr, compressed_view, result, uplo
-            )) == 0
+            ) == 0
         end
     end
     return nothing
