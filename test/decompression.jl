@@ -195,6 +195,74 @@ end
     end
 end
 
+struct ZeroBasedDecompressionArray{T,N,A<:AbstractArray{T,N}} <: AbstractArray{T,N}
+    parent::A
+end
+Base.size(A::ZeroBasedDecompressionArray) = size(A.parent)
+Base.axes(A::ZeroBasedDecompressionArray) = map(n -> 0:(n - 1), size(A))
+
+@testset "Tree CSC buffer validation" begin
+    A = sparse([1, 2, 2, 3, 3, 4, 4], [2, 1, 3, 2, 4, 3, 4], ones(7), 6, 6)
+    result = coloring(
+        A,
+        ColoringProblem(; structure=:symmetric),
+        GreedyColoringAlgorithm(NaturalOrder(); decompression=:substitution),
+    )
+    B = compress(A, result)
+    for uplo in (:F, :L, :U)
+        expected = if uplo == :F
+            A
+        elseif uplo == :L
+            tril(A)
+        else
+            triu(A)
+        end
+        values = fill(NaN, nnz(expected))
+        pointers = expected.colptr
+        fill!(result.buffer, NaN)
+        for bad_B in (B[1:(end - 1), :], B[:, 1:(end - 1)], hcat(B, B))
+            @test_throws DimensionMismatch decompress_csc!(
+                values, pointers, bad_B, result, uplo
+            )
+        end
+        for bad_values in (values[1:(end - 1)], vcat(values, NaN))
+            @test_throws DimensionMismatch decompress_csc!(
+                bad_values, pointers, B, result, uplo
+            )
+        end
+        @test_throws DimensionMismatch decompress_csc!(
+            values, pointers[1:(end - 1)], B, result, uplo
+        )
+        @test_throws ArgumentError decompress_csc!(values, pointers, B, result, :invalid)
+        @test_throws ArgumentError decompress_csc!(
+            ZeroBasedDecompressionArray(values), pointers, B, result, uplo
+        )
+        @test_throws ArgumentError decompress_csc!(
+            values, ZeroBasedDecompressionArray(pointers), B, result, uplo
+        )
+        @test_throws ArgumentError decompress_csc!(
+            values, pointers, ZeroBasedDecompressionArray(B), result, uplo
+        )
+        # Every invalid call must fail before writing output or scratch data.
+        @test all(isnan, values)
+        @test all(isnan, result.buffer)
+        @test decompress_csc!(values, pointers, B, result, uplo) === nothing
+        @test values == nonzeros(expected)
+
+        # Destination writes retain their ordinary bounds checks. A bad
+        # pointer can fail after earlier coefficients have already been written.
+        for bad_pointer in (0, 2length(values) + 2)
+            bad_pointers = fill(bad_pointer, length(pointers))
+            @test_throws BoundsError decompress_csc!(values, bad_pointers, B, result, uplo)
+            storage = zeros(2length(values))
+            values_view = @view storage[1:2:end]
+            @test_throws BoundsError decompress_csc!(
+                values_view, bad_pointers, B, result, uplo
+            )
+        end
+    end
+end
+
 function test_tree_bicoloring_decompression(T, Ti, order, target)
     problem = ColoringProblem(; structure=:nonsymmetric, partition=:bidirectional)
     algorithm = GreedyColoringAlgorithm(

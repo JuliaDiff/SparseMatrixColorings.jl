@@ -516,6 +516,26 @@ sparse matrix with column pointers `A_colptr`, without constructing the matrix.
 The destination pattern must match the full coloring pattern (`uplo=:F`), its
 lower triangle (`uplo=:L`), or its upper triangle (`uplo=:U`), with row indices
 sorted in increasing order within each column. Return `nothing`.
+
+For substitution decompression, the buffers must use one-based indexing, `B`
+must have one row per vertex and one column per color, and the lengths of
+`A_colptr` and `nzA` must match the selected destination pattern. These sizes
+are checked before any entries are written. The following structural conditions
+are assumed without checking:
+
+- `A_colptr[1] == 1` and `A_colptr[end] == length(nzA) + 1`.
+- For each column `j`, `A_colptr[j + 1] - A_colptr[j]` equals the number of
+  stored entries in column `j` of the selected coloring pattern, including
+  explicit zeros. Thus the pointers are nondecreasing.
+- Entries in `nzA[A_colptr[j]:(A_colptr[j + 1] - 1)]` correspond to those
+  pattern entries in increasing row order.
+- The index and offset arrays in `result` have not been modified since coloring.
+
+Substitution decompression checks each destination index immediately before
+writing. Only validated reads and scratch-buffer accesses use `@inbounds`.
+Malformed column pointers that produce out-of-bounds destination indices throw
+`BoundsError`. Pattern mismatches whose indices remain in bounds can still
+produce incorrect values.
 """
 function decompress_csc!(
     nzA::AbstractVector,
@@ -640,14 +660,14 @@ end
         # uplo = :L or uplo = :F
         # A[i,j] is stored at index_ij = (A.colptr[j+1] - offset_L) in A.nzval
         if uplo != :U
-            nzind = A_colptr[j + 1] - lower_triangle_offsets[counter]
+            nzind = @inbounds A_colptr[j + 1] - lower_triangle_offsets[counter]
             nzA[nzind] = val
         end
 
         # uplo = :U or uplo = :F
         # A[j,i] is stored at index_ji = (A.colptr[i] + offset_U) in A.nzval
         if uplo != :L
-            nzind = A_colptr[i] + upper_triangle_offsets[counter]
+            nzind = @inbounds A_colptr[i] + upper_triangle_offsets[counter]
             nzA[nzind] = val
         end
 
@@ -656,18 +676,34 @@ end
         # uplo = :U or uplo = :F
         # A[i,j] is stored at index_ij = (A.colptr[j] + offset_U) in A.nzval
         if uplo != :L
-            nzind = A_colptr[j] + upper_triangle_offsets[counter]
+            nzind = @inbounds A_colptr[j] + upper_triangle_offsets[counter]
             nzA[nzind] = val
         end
 
         # uplo = :L or uplo = :F
         # A[j,i] is stored at index_ji = (A.colptr[i+1] - offset_L) in A.nzval
         if uplo != :U
-            nzind = A_colptr[i + 1] - lower_triangle_offsets[counter]
+            nzind = @inbounds A_colptr[i + 1] - lower_triangle_offsets[counter]
             nzA[nzind] = val
         end
     end
     #! format: on
+    return nothing
+end
+
+function check_tree_csc_buffers(nzA, A_colptr, B, result::TreeSetColoringResult, uplo)
+    Base.require_one_based_indexing(nzA, A_colptr, B)
+    uplo in (:F, :L, :U) || throw(ArgumentError("`uplo` must be :F, :L, or :U."))
+    S = result.ag.S
+    n = size(S, 2)
+    size(B) == (n, ncolors(result)) ||
+        throw(DimensionMismatch("`B` must have size ($n, $(ncolors(result)))."))
+    length(A_colptr) == n + 1 ||
+        throw(DimensionMismatch("`A_colptr` must have length $(n + 1)."))
+
+    expected_nnz = uplo == :F ? nnz(S) : nb_edges(result.ag) + result.ag.nb_self_loops
+    length(nzA) == expected_nnz ||
+        throw(DimensionMismatch("`nzA` must have length $expected_nnz."))
     return nothing
 end
 
@@ -678,6 +714,7 @@ function decompress_csc!(
     result::TreeSetColoringResult,
     uplo::Symbol=:F,
 ) where {R<:Real}
+    check_tree_csc_buffers(nzA, A_colptr, B, result, uplo)
     (;
         ag,
         color,
@@ -698,24 +735,30 @@ function decompress_csc!(
         buffer_right_type = similar(buffer, R)
     end
 
+    # The result constructor stores valid vertex/color indices and offsets in
+    # concrete Vectors. The checks above cover accesses to B and A_colptr; each
+    # computed destination index is checked immediately before writing to nzA.
     # Recover the diagonal coefficients of A
     if !augmented_graph(ag)
         if uplo == :L
             for i in diagonal_indices
                 # A[i, i] is the first element in column i
                 nzind = A_colptr[i]
-                nzA[nzind] = B[i, color[i]]
+                val = @inbounds B[i, color[i]]
+                nzA[nzind] = val
             end
         elseif uplo == :U
             for i in diagonal_indices
                 # A[i, i] is the last element in column i
                 nzind = A_colptr[i + 1] - 1
-                nzA[nzind] = B[i, color[i]]
+                val = @inbounds B[i, color[i]]
+                nzA[nzind] = val
             end
         else  # uplo == :F
             for (k, i) in enumerate(diagonal_indices)
-                nzind = diagonal_nzind[k]
-                nzA[nzind] = B[i, color[i]]
+                nzind = @inbounds diagonal_nzind[k]
+                val = @inbounds B[i, color[i]]
+                nzA[nzind] = val
             end
         end
     end
@@ -726,15 +769,16 @@ function decompress_csc!(
     # Recover the off-diagonal coefficients of A
     for k in 1:nt
         # Positions of the first and last edges of the tree
-        first = tree_edge_indices[k]
-        last = tree_edge_indices[k + 1] - 1
+        first = @inbounds tree_edge_indices[k]
+        last = @inbounds tree_edge_indices[k + 1] - 1
 
         # A star needs no substitution or scratch-buffer updates.
-        if is_star[k]
+        star = @inbounds is_star[k]
+        if star
             for pos in first:last
-                (i, j) = reverse_bfs_orders[pos]
+                (i, j) = @inbounds reverse_bfs_orders[pos]
                 counter += 1
-                val = B[i, color[j]]
+                val = @inbounds B[i, color[j]]
                 set_symmetric_csc!(
                     nzA,
                     A_colptr,
@@ -750,18 +794,18 @@ function decompress_csc!(
         else
             # Reset the buffer to zero for all vertices in the tree (except the root)
             for pos in first:last
-                (vertex, _) = reverse_bfs_orders[pos]
-                buffer_right_type[vertex] = zero(R)
+                (vertex, _) = @inbounds reverse_bfs_orders[pos]
+                @inbounds buffer_right_type[vertex] = zero(R)
             end
             # Reset the buffer to zero for the root vertex
-            (_, root) = reverse_bfs_orders[last]
-            buffer_right_type[root] = zero(R)
+            (_, root) = @inbounds reverse_bfs_orders[last]
+            @inbounds buffer_right_type[root] = zero(R)
 
             for pos in first:last
-                (i, j) = reverse_bfs_orders[pos]
+                (i, j) = @inbounds reverse_bfs_orders[pos]
                 counter += 1
-                val = B[i, color[j]] - buffer_right_type[i]
-                buffer_right_type[j] = buffer_right_type[j] + val
+                val = @inbounds B[i, color[j]] - buffer_right_type[i]
+                @inbounds buffer_right_type[j] = buffer_right_type[j] + val
 
                 set_symmetric_csc!(
                     nzA,
